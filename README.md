@@ -2,6 +2,8 @@
 
 ![Vaylo icon](assets/icon.png)
 
+[Download Vaylo 1.0.1 for Android](https://expo.dev/artifacts/eas/S1ZjADLrXqWeMqLAAUYAh2BPi2fJsOM97-up6g7X1E0.apk)
+
 Android and iOS text translator for English, Spanish, and Malayalam. Expo + TypeScript, Supabase Auth/PostgreSQL, and Gemini 3.5 Flash-Lite on its free API tier. There is no demo login, local database substitute, or fake translation fallback.
 
 ## Start
@@ -77,4 +79,4 @@ The configured hosted project is `mejnwvewnrdkzkagqxdc`; its initial SQL migrati
 
 ## Branding
 
-The app is now named Vaylo. The launcher icon is in `assets/icon.png`; see [BRANDING.md](BRANDING.md) for the design prompt and asset details. Existing Expo project slug, native application IDs, and `threewords://` authentication callbacks are retained for compatibility. The earlier APK predates this branding; build a new preview APK to install the new name and icon.
+The app is now named Vaylo. The launcher icon is in `assets/icon.png`; see [BRANDING.md](BRANDING.md) for the design prompt and asset details. Existing Expo project slug, native application IDs, and `threewords://` authentication callbacks are retained for compatibility. Vaylo 1.0.1 (Android version code 2) includes this name and icon. Earlier download links point to older builds and do not update automatically. Install the latest APK over the existing app.

@@ -1,5 +1,7 @@
 # Verification
 
+Current Android release: **Vaylo 1.0.1 (version code 2)**, build `2b5f4916-9b45-410a-abbc-0f0d4c957cc8`. Earlier APK links below are historical.
+
 ## Passed locally
 
 - TypeScript: `npm run typecheck`.
@@ -41,3 +43,14 @@ The database assertions in `tests/database.sql` also completed successfully agai
 Corrected build `708cd1cd-18d6-41e3-8c04-e9999e7968b6` finished successfully. All 20 Expo Doctor checks passed locally before submission. Final APK: https://expo.dev/artifacts/eas/TaEKszGyvpGe7KrObvmnoTpb9f0TXknu8dx_Uvb2V_M.apk
 
 The final artifact returned a successful partial GET and its ZIP/APK container header was verified. Native device acceptance testing remains outstanding. This is a preview build; custom SMTP is still needed for general-public email signup delivery beyond Supabase’s default sender restrictions.
+
+## Verified branded APK
+
+- Download: https://expo.dev/artifacts/eas/S1ZjADLrXqWeMqLAAUYAh2BPi2fJsOM97-up6g7X1E0.apk
+- Build completed successfully; Expo Doctor passed all 20 checks.
+- Downloaded the APK and inspected it with Google’s official aapt2. The compiled package reports application-label `Vaylo`, versionName `1.0.1`, versionCode `2`, and package `com.threewords.translator`.
+- Extracted and visually inspected the APK’s actual launcher icon; it matches the Vaylo speech-shape design.
+- Retained the existing signing key and package identifier for an in-place upgrade.
+- Updated Expo’s project display name and icon to match.
+- APK SHA-256: `ff559990864454fc515bc581060dad7e9916778ed905f2b37bb2ebaa577fa7a5`.
+- These checks verify package contents; on-device UI and email acceptance tests remain outstanding.
