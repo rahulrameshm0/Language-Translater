@@ -139,8 +139,7 @@ function Application() {
   const [picker, setPicker] = useState<"source" | "target" | null>(null);
   const [keyboard, setKeyboard] = useState(false);
   const [speaking, setSpeaking] = useState(false);
-  const [sendingAudio, setSendingAudio] = useState(false);
-  const locked = a.busy || voice.recording || voice.working || sendingAudio;
+  const locked = a.busy || voice.recording || voice.working;
   useEffect(() => {
     const shown = Keyboard.addListener("keyboardDidShow", () =>
       setKeyboard(true),
@@ -158,12 +157,9 @@ function Application() {
     setSpeaking(false);
   }, [a.result, a.target]);
   useEffect(() => {
-    if (!a.session) {
-      void voice.stop(false);
-      voice.discard();
-      void Speech.stop();
-      setSpeaking(false);
-    }
+    voice.discard();
+    void Speech.stop();
+    setSpeaking(false);
   }, [a.session?.user.id]);
   useEffect(() => {
     const sub = AppState.addEventListener("change", (next) => {
@@ -212,23 +208,11 @@ function Application() {
       a.setMessage("Speech playback is unavailable on this phone.");
     }
   }
-  async function sendVoice() {
-    if (sendingAudio || a.busy) return;
-    setSendingAudio(true);
-    a.setMessage("");
-    try {
-      const payload = await voice.payload();
-      const success = await a.translate(payload);
-      if (success) voice.discard();
-    } catch (error) {
-      a.setMessage(
-        error instanceof Error
-          ? error.message
-          : "Could not upload recording. Try again.",
-      );
-    } finally {
-      setSendingAudio(false);
-    }
+  async function submitTranscript() {
+    if (a.busy || voice.recording || voice.working || !voice.transcript.trim())
+      return;
+    Keyboard.dismiss();
+    await a.translate(voice.transcript);
   }
   function openHistory(item: Translation) {
     if (
@@ -241,6 +225,7 @@ function Application() {
       );
       return;
     }
+    voice.discard();
     a.setSource(item.source_language);
     a.setTarget(item.target_language);
     a.setText(item.original_text);
@@ -249,7 +234,7 @@ function Application() {
     setInputMode("text");
     a.setMessage("");
   }
-  const version = Constants.expoConfig?.version ?? "1.1.0";
+  const version = Constants.expoConfig?.version ?? "1.2.0";
   return (
     <SafeAreaView style={s.safe} edges={["top", "left", "right", "bottom"]}>
       <StatusBar style={dark ? "light" : "dark"} />
@@ -258,9 +243,7 @@ function Application() {
           <Image source={require("./assets/icon.png")} style={s.logo} />
           <View>
             <Text style={s.brand}>Vaylo</Text>
-            <Text style={s.brandCaption}>
-              A little closer, in every language.
-            </Text>
+            <Text style={s.brandCaption}>Your words, understood.</Text>
           </View>
         </View>
         <IconButton
@@ -305,19 +288,19 @@ function Application() {
                   </View>
                   <Text style={s.hero}>
                     {a.mode === "signup"
-                      ? "Your next conversation starts here."
+                      ? "Make yourself understood."
                       : a.mode === "forgot"
                         ? "Let’s get you back in."
                         : a.mode === "reset"
                           ? "A fresh start."
-                          : "Different languages.\nSame connection."}
+                          : "Speak freely.\nConnect clearly."}
                   </Text>
                   <Text style={s.body}>
                     {a.mode === "forgot"
                       ? "Enter your email to receive a password reset link."
                       : a.mode === "reset"
                         ? "Choose a new password with at least eight characters."
-                        : "Translate a thought, speak a sentence, and keep the words that matter."}
+                        : "Type or speak in four languages. Review your words, then translate."}
                   </Text>
                 </View>
                 <View style={s.panel}>
@@ -410,18 +393,18 @@ function Application() {
                   />
                 )}
                 <Text style={s.footnote}>
-                  Your history stays private to your account. Text and voice
-                  clips are sent to Google Gemini for translation. Avoid
-                  sensitive information.
+                  Your history stays private to your account. Confirmed text is
+                  sent to Google Gemini for translation. Live speech is
+                  processed by your phone’s speech service.
                 </Text>
               </>
             ) : a.tab === "Translate" ? (
               <>
                 <View style={s.sectionHeading}>
                   <View>
-                    <Text style={s.title}>Say it your way.</Text>
+                    <Text style={s.title}>Translate.</Text>
                     <Text style={s.body}>
-                      A new language. A familiar voice.
+                      Type a thought. Or let your voice lead.
                     </Text>
                   </View>
                   <View style={s.roundBadge}>
@@ -437,7 +420,7 @@ function Application() {
                       disabled={locked}
                       onPress={() => {
                         setInputMode(mode);
-                        if (mode === "text") voice.discard();
+
                         a.setMessage("");
                         Keyboard.dismiss();
                       }}
@@ -459,7 +442,7 @@ function Application() {
                           { color: inputMode === mode ? c.accent : c.muted },
                         ]}
                       >
-                        {mode === "text" ? "Type text" : "Use your voice"}
+                        {mode === "text" ? "Type" : "Speak"}
                       </Text>
                     </Pressable>
                   ))}
@@ -545,7 +528,7 @@ function Application() {
                       textAlignVertical="top"
                       editable={!locked}
                       style={s.editor}
-                      placeholder="Write something. We’ll find the words."
+                      placeholder="What would you like to say?"
                       placeholderTextColor={c.muted}
                       value={a.text}
                       onChangeText={(value) => {
@@ -577,73 +560,153 @@ function Application() {
                   </View>
                 ) : (
                   <View style={s.voicePanel}>
-                    <Text style={s.panelTitle}>
-                      {voice.recording
-                        ? "Listening to you…"
-                        : voice.uri
-                          ? "Your recording is ready"
-                          : "Every conversation starts with a voice."}
-                    </Text>
-                    <Text style={[s.body, { textAlign: "center" }]}>
-                      {voice.recording
-                        ? "Tap stop when you’re done."
-                        : voice.uri
-                          ? "Translate your recording or record it again."
-                          : `Record up to 30 seconds in ${languages[a.source].name}.`}
-                    </Text>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={
-                        voice.recording ? "Stop recording" : "Start recording"
+                    <View style={s.voiceStatus}>
+                      <View style={s.inline}>
+                        <View
+                          style={[
+                            s.dot,
+                            {
+                              backgroundColor: voice.recording
+                                ? c.teal
+                                : c.accent,
+                            },
+                          ]}
+                        />
+                        <Text
+                          style={[
+                            s.label,
+                            { color: voice.recording ? c.teal : c.accent },
+                          ]}
+                        >
+                          {voice.working
+                            ? "Finishing…"
+                            : voice.recording
+                              ? "Listening live"
+                              : voice.transcript
+                                ? "Ready to review"
+                                : "Speak in " + languages[a.source].name}
+                        </Text>
+                      </View>
+                      <Text style={s.caption}>
+                        {voice.recording
+                          ? `0:${String(voice.seconds).padStart(2, "0")} / 1:00`
+                          : "Live transcript"}
+                      </Text>
+                    </View>
+                    <TextInput
+                      accessibilityLabel="Voice transcript. Review and edit before translating"
+                      accessibilityHint="Words appear while you speak. Stop listening to edit them."
+                      multiline
+                      textAlignVertical="top"
+                      editable={!locked}
+                      placeholder={
+                        voice.recording
+                          ? "Your words will appear here as you speak…"
+                          : "Tap the microphone and start speaking."
                       }
-                      disabled={a.busy || voice.working || sendingAudio}
-                      onPress={() => {
-                        if (voice.recording) void voice.stop();
-                        else
-                          void Speech.stop().then(() => {
-                            setSpeaking(false);
-                            return voice.start();
-                          });
+                      placeholderTextColor={c.muted}
+                      style={[s.editor, s.liveEditor]}
+                      value={voice.transcript}
+                      onChangeText={(value) => {
+                        voice.editTranscript(value);
+                        a.setResult("");
+                        a.setMessage("");
                       }}
-                      style={[
-                        s.recordButton,
-                        voice.recording && { backgroundColor: c.error },
-                      ]}
-                    >
-                      <Icon
-                        name={voice.recording ? "stop" : "mic"}
-                        size={38}
-                        color={voice.recording ? "#FFFFFF" : c.accentText}
-                      />
-                    </Pressable>
-                    <Text style={s.recordTime}>
-                      {voice.recording
-                        ? `0:${String(voice.seconds).padStart(2, "0")}`
-                        : voice.uri
-                          ? "Ready to translate"
-                          : "Tap to record"}
-                    </Text>
-                    {voice.uri && (
-                      <Action
-                        label="Discard recording"
-                        small
-                        quiet
-                        disabled={locked}
-                        onPress={() => voice.discard()}
-                      />
+                    />
+                    <View style={s.voiceFooter}>
+                      <View style={{ flex: 1, gap: 4 }}>
+                        <Text style={s.panelTitle}>
+                          {voice.recording
+                            ? "Speak naturally"
+                            : voice.transcript
+                              ? "Did we get that right?"
+                              : "Speak. See. Review."}
+                        </Text>
+                        <Text style={s.caption}>
+                          {voice.recording
+                            ? "Tap stop to review your words."
+                            : voice.transcript
+                              ? "Edit any words above before submitting."
+                              : "Up to 60 seconds. You’re in control."}
+                        </Text>
+                      </View>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          voice.recording
+                            ? "Stop listening and review transcript"
+                            : voice.transcript
+                              ? "Record again and replace transcript"
+                              : "Start live transcription"
+                        }
+                        disabled={a.busy || voice.working}
+                        onPress={() => {
+                          if (voice.recording) voice.stop();
+                          else {
+                            const begin = () => {
+                              a.setResult("");
+                              void Speech.stop().then(() => {
+                                setSpeaking(false);
+                                return voice.start(languages[a.source].locale);
+                              });
+                            };
+                            if (voice.transcript.trim())
+                              Alert.alert(
+                                "Replace this transcript?",
+                                "Starting again replaces the words above.",
+                                [
+                                  { text: "Keep text", style: "cancel" },
+                                  { text: "Record again", onPress: begin },
+                                ],
+                              );
+                            else begin();
+                          }
+                        }}
+                        style={[
+                          s.recordButton,
+                          voice.recording && { backgroundColor: c.error },
+                        ]}
+                      >
+                        <Icon
+                          name={voice.recording ? "stop" : "mic"}
+                          size={27}
+                          color={voice.recording ? "#FFFFFF" : c.accentText}
+                        />
+                      </Pressable>
+                    </View>
+                    {!voice.recording && !!voice.transcript && (
+                      <View style={s.spaceBetween}>
+                        <Text
+                          style={[
+                            s.caption,
+                            Array.from(voice.transcript).length > 5000 && {
+                              color: c.error,
+                            },
+                          ]}
+                        >
+                          {Array.from(voice.transcript).length.toLocaleString()}{" "}
+                          / 5,000
+                        </Text>
+                        <Action
+                          label="Clear transcript"
+                          small
+                          quiet
+                          disabled={locked}
+                          onPress={() => {
+                            voice.discard();
+                            a.setResult("");
+                          }}
+                        />
+                      </View>
                     )}
-                    <Text style={[s.footnote, { textAlign: "center" }]}>
-                      Audio is sent only when you tap Translate voice. The
-                      recording is deleted from this app after translation.
-                    </Text>
                   </View>
                 )}
                 <Action
                   label={
-                    a.busy || sendingAudio
-                      ? "Finding the right words…"
+                    a.busy
+                      ? "Translating…"
                       : inputMode === "voice"
-                        ? "Translate voice"
+                        ? "Confirm & translate"
                         : "Translate text"
                   }
                   icon={a.busy ? "hourglass-outline" : "arrow-forward"}
@@ -651,11 +714,12 @@ function Application() {
                     locked ||
                     (inputMode === "text"
                       ? !a.text.trim() || Array.from(a.text).length > 5000
-                      : !voice.uri)
+                      : !voice.transcript.trim() ||
+                        Array.from(voice.transcript).length > 5000)
                   }
                   onPress={() => {
                     Keyboard.dismiss();
-                    if (inputMode === "voice") void sendVoice();
+                    if (inputMode === "voice") void submitTranscript();
                     else void a.translate();
                   }}
                 />
@@ -703,25 +767,23 @@ function Application() {
                     </View>
                   </View>
                 )}
-                {inputMode === "voice" && a.result && (
-                  <View style={s.transcript}>
-                    <Text style={s.label}>What you said</Text>
-                    <Text selectable style={s.body}>
-                      {a.text}
-                    </Text>
-                  </View>
+                {inputMode === "voice" && (
+                  <Text style={s.reviewNote}>
+                    Nothing is translated until you confirm. Stop listening,
+                    check the words, then tap Confirm & translate.
+                  </Text>
                 )}
                 <Text style={s.footnote}>
-                  AI translations can make mistakes. Gemini’s free tier may use
-                  text and audio to improve Google’s products.
+                  AI translations can make mistakes. Submitted text is processed
+                  by Gemini. Live speech uses your phone’s recognition service.
                 </Text>
               </>
             ) : a.tab === "History" ? (
               <>
                 <View style={s.sectionHeading}>
                   <View>
-                    <Text style={s.title}>Your word collection.</Text>
-                    <Text style={s.body}>Ready for the next conversation.</Text>
+                    <Text style={s.title}>Saved words.</Text>
+                    <Text style={s.body}>Your translations, in one place.</Text>
                   </View>
                   <IconButton
                     label="Refresh history"
@@ -735,9 +797,7 @@ function Application() {
                     <View style={s.emptyIcon}>
                       <Icon name="time-outline" size={38} color={c.accent} />
                     </View>
-                    <Text style={s.panelTitle}>
-                      Good words are worth keeping.
-                    </Text>
+                    <Text style={s.panelTitle}>Your history starts here.</Text>
                     <Text style={[s.body, { textAlign: "center" }]}>
                       Your text and voice translations will show up here.
                     </Text>
@@ -920,9 +980,10 @@ function Application() {
                     <Text style={s.panelTitle}>Account & privacy</Text>
                   </View>
                   <Text style={s.body}>
-                    Your history is private to your account. Text and voice
-                    clips are processed by Google Gemini. Free-tier content may
-                    be used to improve its products.
+                    Your history is private to your account. Confirmed text is
+                    processed by Google Gemini. Speech recognition uses your
+                    phone’s speech service. Free-tier content may be used to
+                    improve its products.
                   </Text>
                   <Action
                     label="Reset password"
@@ -1114,13 +1175,13 @@ const styles = (c: Colors) =>
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
-      borderBottomWidth: 1,
+      borderBottomWidth: 0,
       borderColor: c.line,
     },
     brandRow: { flexDirection: "row", gap: 11, alignItems: "center" },
     logo: { width: 41, height: 41, borderRadius: 13 },
     brand: {
-      fontSize: 24,
+      fontSize: 25,
       fontWeight: "800",
       letterSpacing: -0.8,
       color: c.ink,
@@ -1128,8 +1189,8 @@ const styles = (c: Colors) =>
     brandCaption: { fontSize: 10, color: c.muted, marginTop: 2 },
     page: {
       padding: 20,
-      paddingBottom: 32,
-      gap: 20,
+      paddingBottom: 28,
+      gap: 18,
       flexGrow: 1,
       width: "100%",
       maxWidth: 640,
@@ -1143,16 +1204,16 @@ const styles = (c: Colors) =>
       gap: 20,
     },
     title: {
-      fontSize: 28,
-      lineHeight: 36,
-      fontWeight: "700",
-      letterSpacing: -1,
+      fontSize: 38,
+      lineHeight: 44,
+      fontWeight: "800",
+      letterSpacing: -1.5,
       color: c.ink,
       marginBottom: 5,
     },
     hero: {
-      fontSize: 37,
-      lineHeight: 45,
+      fontSize: 40,
+      lineHeight: 47,
       fontWeight: "700",
       letterSpacing: -1.4,
       color: c.ink,
@@ -1218,14 +1279,21 @@ const styles = (c: Colors) =>
     },
     segmentSelected: { backgroundColor: c.surface },
     segmentLabel: { fontSize: 14, fontWeight: "600" },
-    languageRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+    languageRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: c.surface,
+      borderRadius: 24,
+      padding: 6,
+    },
     languageButton: {
       flex: 1,
       paddingVertical: 12,
       paddingHorizontal: 12,
       gap: 5,
       backgroundColor: c.surface,
-      borderWidth: 1,
+      borderWidth: 0,
       borderColor: c.line,
       borderRadius: 17,
     },
@@ -1239,23 +1307,23 @@ const styles = (c: Colors) =>
     },
     composer: {
       backgroundColor: c.surface,
-      borderRadius: 23,
-      padding: 20,
-      borderWidth: 1,
+      borderRadius: 28,
+      padding: 22,
+      borderWidth: 0,
       borderColor: c.line,
     },
     editor: {
-      fontSize: 21,
-      lineHeight: 32,
+      fontSize: 24,
+      lineHeight: 35,
       color: c.ink,
-      minHeight: 140,
-      maxHeight: 240,
+      minHeight: 190,
+      maxHeight: 320,
       paddingTop: 12,
       paddingBottom: 18,
     },
     resultPanel: {
-      backgroundColor: c.tealTint,
-      borderRadius: 23,
+      backgroundColor: c.tint,
+      borderRadius: 28,
       padding: 22,
       gap: 20,
     },
@@ -1275,27 +1343,41 @@ const styles = (c: Colors) =>
     },
     voicePanel: {
       backgroundColor: c.surface,
-      padding: 24,
-      borderRadius: 23,
-      alignItems: "center",
-      gap: 16,
+      borderRadius: 28,
+      padding: 22,
+      gap: 12,
       borderWidth: 1,
       borderColor: c.line,
     },
+    voiceStatus: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+    },
+    liveEditor: { minHeight: 200, maxHeight: 360, paddingTop: 16 },
+    voiceFooter: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 14,
+      borderTopWidth: 1,
+      borderColor: c.line,
+      paddingTop: 16,
+    },
     recordButton: {
-      height: 94,
-      width: 94,
-      borderRadius: 47,
+      height: 60,
+      width: 60,
+      borderRadius: 22,
       backgroundColor: c.accent,
       alignItems: "center",
       justifyContent: "center",
-      marginVertical: 7,
     },
-    recordTime: {
-      color: c.ink,
-      fontSize: 16,
-      fontWeight: "700",
-      fontVariant: ["tabular-nums"],
+    reviewNote: {
+      fontSize: 13,
+      lineHeight: 21,
+      color: c.muted,
+      paddingHorizontal: 4,
     },
     transcript: { gap: 8, paddingHorizontal: 4 },
     historyCard: {
@@ -1362,9 +1444,12 @@ const styles = (c: Colors) =>
     navigation: {
       flexDirection: "row",
       backgroundColor: c.surface,
-      borderTopWidth: 1,
+      borderTopWidth: 0,
       borderColor: c.line,
-      paddingVertical: 7,
+      paddingVertical: 5,
+      marginHorizontal: 18,
+      marginBottom: 8,
+      borderRadius: 26,
     },
     navItem: {
       flex: 1,

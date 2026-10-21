@@ -151,7 +151,7 @@ export function useTranslator() {
       setBusy(false);
     }
   }
-  async function translate(audio?: { audioBase64: string; mimeType: string }) {
+  async function translate(confirmedText?: string) {
     const current = generation.current;
     setBusy(true);
     setMessage("");
@@ -159,7 +159,7 @@ export function useTranslator() {
     try {
       const { data, error } = await supabase.functions.invoke("translate", {
         body: {
-          ...(audio ?? { text }),
+          text: confirmedText ?? text,
           sourceLanguage: source,
           targetLanguage: target,
         },
@@ -176,8 +176,7 @@ export function useTranslator() {
       if (typeof data?.translatedText !== "string")
         throw new Error("No translation received. Try again.");
       setResult(data.translatedText);
-      if (audio && typeof data.originalText === "string")
-        setText(data.originalText);
+      if (confirmedText !== undefined) setText(confirmedText);
       if (data.warning) setMessage(data.warning);
       return true;
     } catch (e) {

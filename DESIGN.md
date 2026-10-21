@@ -1,7 +1,20 @@
-# Vaylo interface
+# Vaylo 1.2 design
 
-A focused translation notebook: a compact Vaylo masthead, paired source/target language controls, a spacious writing surface, and a distinct result card. Text and Voice are explicit input modes. History uses readable cards; Account groups appearance, updates, and authentication actions. Bottom navigation disappears while typing to give the keyboard-aware scroll view room to keep the active input visible.
+The translator is a conversation workspace, with one integrated language rail and a large writing/transcript canvas. Voice input follows an actual sequence: Speak, Review, Translate. Words appear in the canvas as recognition events arrive. Stopping exposes an editable transcript and an explicit Confirm & translate action. Nothing is translated automatically.
 
-Light palette: paper #F3F6FC, white surfaces, ink #14243D, blue #235CEB, teal #087D72. Dark palette: background #0A1323, surfaces #142139, text #EFF4FF, blue #93B8FF, teal #7DE3CD. Semantic colors apply across forms, modals, history, errors, and navigation. Native fonts support Armenian and German script fallback and system text scaling. Rounded cards, restrained borders, generous spacing, and Ionicons give controls a consistent visual language.
+Tokens: porcelain #F5F7FC, white #FFFFFF, midnight ink #17233D, cobalt #2855F6, speech teal #087F78, slate #65738E. Dark uses midnight #0C1427, blue slate #17243D, pale ink #EDF3FF, and soft cobalt #A2B8FF. Cobalt marks translation actions; teal marks speech status. The existing Vaylo icon remains.
 
-System/light/dark appearance persists on the device. Accessible labels accompany icon controls; actions have generous touch areas. Voice recording uses a clear elapsed timer and explicit stop/send/discard actions. The update banner was removed; users install newer APKs manually. No animation or decoration competes with the source and translated text.
+Type: native sans-serif with rounded iOS display styling, heavy 38/44 screen titles, 24/35 source and transcript text, 15/23 body, and 12/18 secondary information. Native-script fallback supports Armenian. All source and result content is left aligned.
+
+Layout:
+  compact brand                         theme
+  Translate / subtitle
+  [Type] [Speak]
+  [English          swap           Spanish]
+  [source or live transcript canvas       ]
+  [microphone + Stop / Record again       ]
+  [review guidance and Confirm & translate]
+  [translated result and copy / listen    ]
+  floating three-destination navigation
+
+Review of the old design: separate bordered cards and a large centered microphone hid the content hierarchy. Replace them with a single language rail, a transcript-first voice surface, a clear review state, and quiet supporting account/history layouts. Use different radii for structural surfaces and small controls. No decorative waveform, fake live text, or repeating promotional headings. Keyboard-aware scrolling and light/dark palettes remain throughout.
