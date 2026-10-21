@@ -12,6 +12,10 @@ Upgrade: English, Spanish, Armenian, and German; text and voice translation; lig
 - Expo Doctor: 20/20 checks passed. Compatible Expo 55 dependencies installed and deduplicated.
 - Android and iOS Hermes bundles exported successfully, including the voice/keyboard native-module JavaScript integrations.
 
+## Live service checks
+
+A real synthetic English recording was successfully transcribed by Gemini and translated into German: “Hallo, wie geht es dir heute?” A hosted request without a user token returned HTTP 401 with the function’s sign-in message. Direct Armenian text checks timed out on this connection, so live Armenian quality is not yet verified. These checks do not establish the complete authenticated mobile flow.
+
 ## Acceptance testing still needed
 
 Physical Android/iOS testing is outstanding: keyboard visibility with each keyboard, microphone permission/recording lifecycle, speaker output, dark-mode appearance, large text, and native Armenian glyphs. Read-aloud depends on voices installed on the device; Armenian may be unavailable. An Android cloud build verifies compilation, not microphone or keyboard behavior.
