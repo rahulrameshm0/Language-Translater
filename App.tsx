@@ -4,6 +4,7 @@ import {
   Alert,
   AppState,
   Image,
+  ScrollView,
   Keyboard,
   Modal,
   Platform,
@@ -19,6 +20,13 @@ import {
   KeyboardProvider,
 } from "react-native-keyboard-controller";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import {
+  useFonts,
+  Outfit_400Regular,
+  Outfit_500Medium,
+  Outfit_600SemiBold,
+  Outfit_700Bold,
+} from "@expo-google-fonts/outfit";
 import { StatusBar } from "expo-status-bar";
 import * as Clipboard from "expo-clipboard";
 import * as Speech from "expo-speech";
@@ -26,6 +34,8 @@ import Constants from "expo-constants";
 import { configured, supabase } from "./src/supabase";
 import {
   isLanguage,
+  isRtlLanguage,
+  filterLanguages,
   languages,
   Language,
   languageName,
@@ -78,7 +88,7 @@ function Action({
         justifyContent: "center",
         paddingHorizontal: small ? 13 : 20,
         paddingVertical: 12,
-        borderRadius: 16,
+        borderRadius: 20,
         backgroundColor: quiet ? "transparent" : c.accent,
         opacity: disabled ? 0.4 : pressed ? 0.7 : 1,
       })}
@@ -89,7 +99,7 @@ function Action({
       <Text
         style={{
           color: quiet ? c.accent : c.accentText,
-          fontWeight: "700",
+          fontFamily: "Outfit_700Bold",
           fontSize: small ? 14 : 16,
         }}
       >
@@ -130,6 +140,70 @@ function IconButton({
     </Pressable>
   );
 }
+function LanguageCover({ compact = false }: { compact?: boolean }) {
+  const { colors } = useTheme();
+  const s = styles(colors);
+  return (
+    <View style={[s.cover, compact && { minHeight: 128, paddingVertical: 18 }]}>
+      <View style={s.coverCopy}>
+        <Text
+          style={[s.coverTitle, compact && { fontSize: 29, lineHeight: 33 }]}
+        >
+          Hello,{"\n"}world.
+        </Text>
+        <View style={s.coverTag}>
+          <Icon name="globe-outline" size={14} color="#FFFFFF" />
+          <Text style={s.coverTagText}>30 languages, one connection</Text>
+        </View>
+      </View>
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={s.glyphStack}
+      >
+        <View
+          style={[
+            s.glyphTile,
+            {
+              backgroundColor: "#DAD5FF",
+              top: 0,
+              right: 30,
+              transform: [{ rotate: "-13deg" }],
+            },
+          ]}
+        >
+          <Text style={[s.glyph, { color: "#4135A5" }]}>あ</Text>
+        </View>
+        <View
+          style={[
+            s.glyphTile,
+            {
+              backgroundColor: "#BCEFD8",
+              top: 39,
+              right: 0,
+              transform: [{ rotate: "12deg" }],
+            },
+          ]}
+        >
+          <Text style={[s.glyph, { color: "#135F50" }]}>Ա</Text>
+        </View>
+        <View
+          style={[
+            s.glyphTile,
+            {
+              backgroundColor: "#FFFFFF",
+              top: 77,
+              right: 43,
+              transform: [{ rotate: "-6deg" }],
+            },
+          ]}
+        >
+          <Text style={[s.glyph, { color: "#3157FF", fontSize: 29 }]}>Aa</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
 function Application() {
   const a = useTranslator();
   const { colors: c, dark, preference, setPreference } = useTheme();
@@ -138,6 +212,8 @@ function Application() {
   const [inputMode, setInputMode] = useState<"text" | "voice">("text");
   const [picker, setPicker] = useState<"source" | "target" | null>(null);
   const [keyboard, setKeyboard] = useState(false);
+  const [languageQuery, setLanguageQuery] = useState("");
+  const visibleLanguages = filterLanguages(languageQuery);
   const [speaking, setSpeaking] = useState(false);
   const locked = a.busy || voice.recording || voice.working;
   useEffect(() => {
@@ -234,7 +310,7 @@ function Application() {
     setInputMode("text");
     a.setMessage("");
   }
-  const version = Constants.expoConfig?.version ?? "1.2.0";
+  const version = Constants.expoConfig?.version ?? "1.3.0";
   return (
     <SafeAreaView style={s.safe} edges={["top", "left", "right", "bottom"]}>
       <StatusBar style={dark ? "light" : "dark"} />
@@ -243,7 +319,7 @@ function Application() {
           <Image source={require("./assets/icon.png")} style={s.logo} />
           <View>
             <Text style={s.brand}>Vaylo</Text>
-            <Text style={s.brandCaption}>Your words, understood.</Text>
+            <Text style={s.brandCaption}>Words without limits.</Text>
           </View>
         </View>
         <IconButton
@@ -281,9 +357,13 @@ function Application() {
                   <View style={s.badge}>
                     <Icon name="chatbubbles-outline" size={18} color={c.teal} />
                     <Text
-                      style={{ color: c.teal, fontSize: 13, fontWeight: "600" }}
+                      style={{
+                        color: c.teal,
+                        fontSize: 13,
+                        fontFamily: "Outfit_600SemiBold",
+                      }}
                     >
-                      English · Spanish · Armenian · German
+                      30 languages. Endless conversations.
                     </Text>
                   </View>
                   <Text style={s.hero}>
@@ -300,7 +380,7 @@ function Application() {
                       ? "Enter your email to receive a password reset link."
                       : a.mode === "reset"
                         ? "Choose a new password with at least eight characters."
-                        : "Type or speak in four languages. Review your words, then translate."}
+                        : "Type or speak in 30 languages. Review your words, then translate."}
                   </Text>
                 </View>
                 <View style={s.panel}>
@@ -400,17 +480,7 @@ function Application() {
               </>
             ) : a.tab === "Translate" ? (
               <>
-                <View style={s.sectionHeading}>
-                  <View>
-                    <Text style={s.title}>Translate.</Text>
-                    <Text style={s.body}>
-                      Type a thought. Or let your voice lead.
-                    </Text>
-                  </View>
-                  <View style={s.roundBadge}>
-                    <Icon name="language-outline" size={25} color={c.accent} />
-                  </View>
-                </View>
+                {!keyboard && <LanguageCover compact={inputMode === "voice"} />}
                 <View style={s.segment}>
                   {(["text", "voice"] as const).map((mode) => (
                     <Pressable
@@ -434,15 +504,17 @@ function Application() {
                           mode === "text" ? "create-outline" : "mic-outline"
                         }
                         size={19}
-                        color={inputMode === mode ? c.accent : c.muted}
+                        color={inputMode === mode ? c.accentText : c.muted}
                       />
                       <Text
                         style={[
                           s.segmentLabel,
-                          { color: inputMode === mode ? c.accent : c.muted },
+                          {
+                            color: inputMode === mode ? c.accentText : c.muted,
+                          },
                         ]}
                       >
-                        {mode === "text" ? "Type" : "Speak"}
+                        {mode === "text" ? "Type a message" : "Speak live"}
                       </Text>
                     </Pressable>
                   ))}
@@ -455,17 +527,17 @@ function Application() {
                     style={s.languageButton}
                     onPress={() => {
                       Keyboard.dismiss();
+                      setLanguageQuery("");
                       setPicker("source");
                     }}
                   >
-                    <Text style={s.smallLabel}>From</Text>
+                    <Text style={s.smallLabel}>I’m speaking</Text>
                     <View style={s.inline}>
                       <Text style={s.languageText}>
                         {languages[a.source].name}
                       </Text>
                       <Icon name="chevron-down" size={16} />
                     </View>
-                    <Text style={s.caption}>{languages[a.source].native}</Text>
                   </Pressable>
                   <IconButton
                     label="Swap languages"
@@ -487,17 +559,17 @@ function Application() {
                     style={s.languageButton}
                     onPress={() => {
                       Keyboard.dismiss();
+                      setLanguageQuery("");
                       setPicker("target");
                     }}
                   >
-                    <Text style={s.smallLabel}>To</Text>
+                    <Text style={s.smallLabel}>Translate to</Text>
                     <View style={s.inline}>
                       <Text style={s.languageText}>
                         {languages[a.target].name}
                       </Text>
                       <Icon name="chevron-down" size={16} />
                     </View>
-                    <Text style={s.caption}>{languages[a.target].native}</Text>
                   </Pressable>
                 </View>
                 {inputMode === "text" ? (
@@ -527,7 +599,12 @@ function Application() {
                       multiline
                       textAlignVertical="top"
                       editable={!locked}
-                      style={s.editor}
+                      style={[
+                        s.editor,
+                        {
+                          textAlign: isRtlLanguage(a.source) ? "right" : "left",
+                        },
+                      ]}
                       placeholder="What would you like to say?"
                       placeholderTextColor={c.muted}
                       value={a.text}
@@ -605,7 +682,13 @@ function Application() {
                           : "Tap the microphone and start speaking."
                       }
                       placeholderTextColor={c.muted}
-                      style={[s.editor, s.liveEditor]}
+                      style={[
+                        s.editor,
+                        s.liveEditor,
+                        {
+                          textAlign: isRtlLanguage(a.source) ? "right" : "left",
+                        },
+                      ]}
                       value={voice.transcript}
                       onChangeText={(value) => {
                         voice.editTranscript(value);
@@ -734,7 +817,15 @@ function Application() {
                       </View>
                       <Text style={s.caption}>Translation</Text>
                     </View>
-                    <Text selectable style={s.translated}>
+                    <Text
+                      selectable
+                      style={[
+                        s.translated,
+                        {
+                          textAlign: isRtlLanguage(a.target) ? "right" : "left",
+                        },
+                      ]}
+                    >
                       {a.result}
                     </Text>
                     <View style={s.resultActions}>
@@ -940,7 +1031,7 @@ function Application() {
                           <Text
                             style={{
                               color: preference === value ? c.accent : c.ink,
-                              fontWeight: "600",
+                              fontFamily: "Outfit_600SemiBold",
                               fontSize: 13,
                             }}
                           >
@@ -962,7 +1053,7 @@ function Application() {
                         style={{
                           color: c.teal,
                           fontSize: 12,
-                          fontWeight: "700",
+                          fontFamily: "Outfit_700Bold",
                         }}
                       >
                         {Platform.OS === "ios" ? "iOS" : "Android"}
@@ -1069,20 +1160,23 @@ function Application() {
                   <View
                     style={[
                       s.navIcon,
-                      a.tab === item.name && { backgroundColor: c.tint },
+                      a.tab === item.name && { backgroundColor: c.navSelected },
                     ]}
                   >
                     <Icon
                       name={item.icon}
                       size={23}
-                      color={a.tab === item.name ? c.accent : c.muted}
+                      color={a.tab === item.name ? c.navActive : c.navMuted}
                     />
                   </View>
                   <Text
                     style={{
                       fontSize: 11,
-                      fontWeight: a.tab === item.name ? "700" : "500",
-                      color: a.tab === item.name ? c.accent : c.muted,
+                      fontFamily:
+                        a.tab === item.name
+                          ? "Outfit_600SemiBold"
+                          : "Outfit_500Medium",
+                      color: a.tab === item.name ? c.navActive : c.navMuted,
                     }}
                   >
                     {item.name}
@@ -1118,37 +1212,76 @@ function Application() {
                 onPress={() => setPicker(null)}
               />
             </View>
-            {(Object.keys(languages) as Language[]).map((code) => (
-              <Pressable
-                key={code}
-                accessibilityRole="radio"
-                accessibilityState={{
-                  selected:
-                    (picker === "source" ? a.source : a.target) === code,
-                }}
-                style={s.languageOption}
-                onPress={() => {
-                  if (picker) {
-                    a.chooseLanguage(code, picker);
-                    voice.discard();
-                  }
-                  setPicker(null);
-                }}
-              >
-                <View style={s.languageInitial}>
-                  <Text style={{ color: c.accent, fontWeight: "700" }}>
-                    {languages[code].short}
-                  </Text>
-                </View>
-                <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={s.languageText}>{languages[code].name}</Text>
-                  <Text style={s.caption}>{languages[code].native}</Text>
-                </View>
-                {(picker === "source" ? a.source : a.target) === code && (
-                  <Icon name="checkmark-circle" color={c.accent} />
-                )}
-              </Pressable>
-            ))}
+            <View style={s.searchBox}>
+              <Icon name="search-outline" color={c.muted} size={20} />
+              <TextInput
+                accessibilityLabel="Search 30 languages"
+                placeholder="Search language or native name"
+                placeholderTextColor={c.muted}
+                value={languageQuery}
+                onChangeText={setLanguageQuery}
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={s.searchInput}
+              />
+              {!!languageQuery && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear language search"
+                  onPress={() => setLanguageQuery("")}
+                  style={{ padding: 8 }}
+                >
+                  <Icon name="close-circle" size={18} color={c.muted} />
+                </Pressable>
+              )}
+            </View>
+            <Text style={s.caption}>
+              {visibleLanguages.length}{" "}
+              {visibleLanguages.length === 1 ? "language" : "languages"}
+            </Text>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ paddingBottom: 20 }}
+            >
+              {visibleLanguages.length === 0 && (
+                <Text style={[s.body, { paddingVertical: 24 }]}>
+                  No matching language. Try its English or native name.
+                </Text>
+              )}
+              {visibleLanguages.map((code) => (
+                <Pressable
+                  key={code}
+                  accessibilityRole="radio"
+                  accessibilityState={{
+                    selected:
+                      (picker === "source" ? a.source : a.target) === code,
+                  }}
+                  style={s.languageOption}
+                  onPress={() => {
+                    if (picker) {
+                      a.chooseLanguage(code, picker);
+                      voice.discard();
+                    }
+                    setPicker(null);
+                  }}
+                >
+                  <View style={s.languageInitial}>
+                    <Text
+                      style={{ color: c.accent, fontFamily: "Outfit_700Bold" }}
+                    >
+                      {languages[code].short}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1, gap: 4 }}>
+                    <Text style={s.languageText}>{languages[code].name}</Text>
+                    <Text style={s.caption}>{languages[code].native}</Text>
+                  </View>
+                  {(picker === "source" ? a.source : a.target) === code && (
+                    <Icon name="checkmark-circle" color={c.accent} />
+                  )}
+                </Pressable>
+              ))}
+            </ScrollView>
           </SafeAreaView>
         </View>
       </Modal>
@@ -1156,6 +1289,25 @@ function Application() {
   );
 }
 export default function App() {
+  const [loaded, error] = useFonts({
+    Outfit_400Regular,
+    Outfit_500Medium,
+    Outfit_600SemiBold,
+    Outfit_700Bold,
+  });
+  if (!loaded && !error)
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "#EEF2FA",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <ActivityIndicator color="#3157FF" />
+      </View>
+    );
   return (
     <SafeAreaProvider>
       <KeyboardProvider>
@@ -1182,7 +1334,7 @@ const styles = (c: Colors) =>
     logo: { width: 41, height: 41, borderRadius: 13 },
     brand: {
       fontSize: 25,
-      fontWeight: "800",
+      fontFamily: "Outfit_700Bold",
       letterSpacing: -0.8,
       color: c.ink,
     },
@@ -1190,7 +1342,7 @@ const styles = (c: Colors) =>
     page: {
       padding: 20,
       paddingBottom: 28,
-      gap: 18,
+      gap: 14,
       flexGrow: 1,
       width: "100%",
       maxWidth: 640,
@@ -1206,7 +1358,7 @@ const styles = (c: Colors) =>
     title: {
       fontSize: 38,
       lineHeight: 44,
-      fontWeight: "800",
+      fontFamily: "Outfit_700Bold",
       letterSpacing: -1.5,
       color: c.ink,
       marginBottom: 5,
@@ -1214,17 +1366,27 @@ const styles = (c: Colors) =>
     hero: {
       fontSize: 40,
       lineHeight: 47,
-      fontWeight: "700",
+      fontFamily: "Outfit_700Bold",
       letterSpacing: -1.4,
       color: c.ink,
     },
-    body: { fontSize: 15, lineHeight: 23, color: c.muted },
-    caption: { fontSize: 12, lineHeight: 18, color: c.muted },
-    label: { fontSize: 13, fontWeight: "600", color: c.muted },
+    body: {
+      fontFamily: "Outfit_400Regular",
+      fontSize: 15,
+      lineHeight: 23,
+      color: c.muted,
+    },
+    caption: {
+      fontFamily: "Outfit_400Regular",
+      fontSize: 12,
+      lineHeight: 18,
+      color: c.muted,
+    },
+    label: { fontSize: 13, fontFamily: "Outfit_600SemiBold", color: c.muted },
     smallLabel: { fontSize: 11, color: c.muted },
     panelTitle: {
       fontSize: 18,
-      fontWeight: "700",
+      fontFamily: "Outfit_700Bold",
       color: c.ink,
       lineHeight: 26,
       letterSpacing: -0.3,
@@ -1265,8 +1427,10 @@ const styles = (c: Colors) =>
     segment: {
       flexDirection: "row",
       padding: 5,
-      borderRadius: 17,
-      backgroundColor: c.secondary,
+      borderRadius: 22,
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.line,
     },
     segmentItem: {
       flex: 1,
@@ -1277,8 +1441,8 @@ const styles = (c: Colors) =>
       paddingVertical: 12,
       borderRadius: 12,
     },
-    segmentSelected: { backgroundColor: c.surface },
-    segmentLabel: { fontSize: 14, fontWeight: "600" },
+    segmentSelected: { backgroundColor: c.accent },
+    segmentLabel: { fontSize: 14, fontFamily: "Outfit_600SemiBold" },
     languageRow: {
       flexDirection: "row",
       alignItems: "center",
@@ -1297,7 +1461,11 @@ const styles = (c: Colors) =>
       borderColor: c.line,
       borderRadius: 17,
     },
-    languageText: { fontSize: 15, fontWeight: "600", color: c.ink },
+    languageText: {
+      fontSize: 15,
+      fontFamily: "Outfit_600SemiBold",
+      color: c.ink,
+    },
     inline: { flexDirection: "row", alignItems: "center", gap: 7 },
     spaceBetween: {
       flexDirection: "row",
@@ -1313,10 +1481,11 @@ const styles = (c: Colors) =>
       borderColor: c.line,
     },
     editor: {
+      fontFamily: "Outfit_400Regular",
       fontSize: 24,
       lineHeight: 35,
       color: c.ink,
-      minHeight: 190,
+      minHeight: 110,
       maxHeight: 320,
       paddingTop: 12,
       paddingBottom: 18,
@@ -1329,6 +1498,7 @@ const styles = (c: Colors) =>
     },
     dot: { height: 7, width: 7, borderRadius: 4, backgroundColor: c.teal },
     translated: {
+      fontFamily: "Outfit_500Medium",
       fontSize: 25,
       lineHeight: 38,
       color: c.ink,
@@ -1390,7 +1560,7 @@ const styles = (c: Colors) =>
     },
     historyPair: {
       fontSize: 13,
-      fontWeight: "600",
+      fontFamily: "Outfit_600SemiBold",
       color: c.accent,
       flexShrink: 1,
     },
@@ -1423,7 +1593,7 @@ const styles = (c: Colors) =>
       alignItems: "center",
       justifyContent: "center",
     },
-    email: { fontSize: 14, fontWeight: "600", color: c.ink },
+    email: { fontSize: 14, fontFamily: "Outfit_600SemiBold", color: c.ink },
     secureBadge: { padding: 8, borderRadius: 14, backgroundColor: c.tealTint },
     themeOptions: { flexDirection: "row", gap: 10 },
     themeOption: {
@@ -1443,7 +1613,7 @@ const styles = (c: Colors) =>
     },
     navigation: {
       flexDirection: "row",
-      backgroundColor: c.surface,
+      backgroundColor: c.navBg,
       borderTopWidth: 0,
       borderColor: c.line,
       paddingVertical: 5,
@@ -1470,11 +1640,75 @@ const styles = (c: Colors) =>
     noticeText: { color: c.ink, fontSize: 14, lineHeight: 22, flex: 1 },
     modalBackdrop: { flex: 1, backgroundColor: c.overlay },
     sheet: {
+      maxHeight: "86%",
       backgroundColor: c.surface,
       borderTopLeftRadius: 28,
       borderTopRightRadius: 28,
       padding: 22,
       gap: 14,
+    },
+    cover: {
+      backgroundColor: "#3157FF",
+      minHeight: 150,
+      borderRadius: 30,
+      padding: 22,
+      flexDirection: "row",
+      alignItems: "center",
+      overflow: "hidden",
+    },
+    coverCopy: { flex: 1, gap: 17, zIndex: 1 },
+    coverTitle: {
+      fontFamily: "Outfit_700Bold",
+      fontSize: 38,
+      lineHeight: 40,
+      letterSpacing: -1.1,
+      color: "#FFFFFF",
+      maxWidth: "76%",
+    },
+    coverTag: {
+      maxWidth: "73%",
+      flexDirection: "row",
+      flexWrap: "wrap",
+      alignItems: "center",
+      gap: 5,
+    },
+    coverTagText: {
+      flexShrink: 1,
+      fontFamily: "Outfit_500Medium",
+      fontSize: 11,
+      color: "#FFFFFF",
+    },
+    glyphStack: {
+      position: "absolute",
+      width: 110,
+      height: 150,
+      right: -6,
+      top: 14,
+    },
+    glyphTile: {
+      position: "absolute",
+      height: 62,
+      width: 62,
+      borderRadius: 20,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    glyph: { fontSize: 35, fontFamily: "Outfit_600SemiBold" },
+    searchBox: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      backgroundColor: c.secondary,
+      paddingHorizontal: 14,
+      borderRadius: 18,
+    },
+    searchInput: {
+      flex: 1,
+      minWidth: 0,
+      minHeight: 52,
+      fontSize: 15,
+      fontFamily: "Outfit_400Regular",
+      color: c.ink,
     },
     sheetHandle: {
       height: 4,

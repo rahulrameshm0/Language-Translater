@@ -1,3 +1,4 @@
+import { supportedLanguages } from "../supabase/functions/translate/validation.ts";
 import { handler } from "../supabase/functions/translate/index.ts";
 function assert(value: unknown, message = "Assertion failed"): asserts value {
   if (!value) throw new Error(message);
@@ -116,10 +117,10 @@ async function run(
   }
 }
 Deno.test(
-  "backend translates all twelve directions and persists verified ownership",
+  "backend translates all 870 directions and persists verified ownership",
   async () => {
-    for (const sourceLanguage of ["en", "es", "hy", "de"])
-      for (const targetLanguage of ["en", "es", "hy", "de"])
+    for (const sourceLanguage of supportedLanguages)
+      for (const targetLanguage of supportedLanguages)
         if (sourceLanguage !== targetLanguage) {
           const result = await run(
             {},

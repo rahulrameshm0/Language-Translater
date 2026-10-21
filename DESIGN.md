@@ -1,20 +1,18 @@
-# Vaylo 1.2 design
+# Vaylo 1.3: expressive, focused translation
 
-The translator is a conversation workspace, with one integrated language rail and a large writing/transcript canvas. Voice input follows an actual sequence: Speak, Review, Translate. Words appear in the canvas as recognition events arrive. Stopping exposes an editable transcript and an explicit Confirm & translate action. Nothing is translated automatically.
+A cobalt language cover creates the single memorable visual moment: large Outfit lettering beside overlapping native-script tiles. Below it, a restrained white/blue-slate workspace brings together input mode, source/target languages and the writing canvas. Rounded square controls and a floating pill navigation replace the earlier uniform card stack. Live voice remains transcript-first, with explicit review before sending.
 
-Tokens: porcelain #F5F7FC, white #FFFFFF, midnight ink #17233D, cobalt #2855F6, speech teal #087F78, slate #65738E. Dark uses midnight #0C1427, blue slate #17243D, pale ink #EDF3FF, and soft cobalt #A2B8FF. Cobalt marks translation actions; teal marks speech status. The existing Vaylo icon remains.
-
-Type: native sans-serif with rounded iOS display styling, heavy 38/44 screen titles, 24/35 source and transcript text, 15/23 body, and 12/18 secondary information. Native-script fallback supports Armenian. All source and result content is left aligned.
+Palette: cloud #EEF2FA, porcelain #FFFFFF, ink #14213D, cobalt #3157FF, lavender #DCD8FF, speech mint #BCEFD8. Dark: midnight #090F20, slate #15213A, pale text #F1F5FF. Hero cobalt is deliberate language-brand color, not a decorative gradient. Outfit regular/medium/semibold/bold is bundled for display/body; OS fallback renders native scripts. Large 36/40 headlines, 24/35 input, 15/23 body. Language lists use native and English names with search; all content remains left aligned except right-to-left source/result text.
 
 Layout:
-  compact brand                         theme
-  Translate / subtitle
-  [Type] [Speak]
-  [English          swap           Spanish]
-  [source or live transcript canvas       ]
-  [microphone + Stop / Record again       ]
-  [review guidance and Confirm & translate]
-  [translated result and copy / listen    ]
-  floating three-destination navigation
+  Vaylo mark                              theme
+  [Speak beyond borders.   overlapping glyph tiles]
+  [30 languages             Live voice]
+  [Type a message | Speak live]
+  [source language       swap       target language]
+  [writing or live transcript canvas              ]
+  [Translate / Confirm & translate                ]
+  [result surface + listen / copy                 ]
+  [floating Translate / History / Account]
 
-Review of the old design: separate bordered cards and a large centered microphone hid the content hierarchy. Replace them with a single language rail, a transcript-first voice surface, a clear review state, and quiet supporting account/history layouts. Use different radii for structural surfaces and small controls. No decorative waveform, fake live text, or repeating promotional headings. Keyboard-aware scrolling and light/dark palettes remain throughout.
+Compared with 1.2, the expressive cover, distinctive bundled typography, integrated controls and higher-contrast navigation make a visible structural change. Keep the hero compact enough that the input stays close. During keyboard entry the hero collapses and navigation hides to prioritize the active field. Native scripts are visual identity and real content, not flag icons or decorative stock imagery. Language search and review states take priority over animation.

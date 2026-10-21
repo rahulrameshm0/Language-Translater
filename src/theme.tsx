@@ -9,25 +9,29 @@ import { useColorScheme } from "react-native";
 import * as SecureStore from "expo-secure-store";
 export type ThemePreference = "system" | "light" | "dark";
 const light = {
-  bg: "#F5F7FC",
+  bg: "#EEF2FA",
   surface: "#FFFFFF",
   secondary: "#EAF0FA",
-  ink: "#17233D",
+  ink: "#14213D",
   muted: "#65738E",
   line: "#DCE5F2",
-  accent: "#2855F6",
+  accent: "#3157FF",
   accentText: "#FFFFFF",
   tint: "#EAF0FF",
   teal: "#087F78",
   tealTint: "#DFF6F0",
   error: "#AC293D",
   overlay: "rgba(10,22,40,0.55)",
+  navBg: "#14213D",
+  navSelected: "#2A3C60",
+  navActive: "#BCEFD8",
+  navMuted: "#B8C5DF",
 };
 const dark = {
-  bg: "#0C1427",
-  surface: "#17243D",
+  bg: "#090F20",
+  surface: "#15213A",
   secondary: "#1D2D48",
-  ink: "#EDF3FF",
+  ink: "#F1F5FF",
   muted: "#A6B6D0",
   line: "#2A3D5B",
   accent: "#A2B8FF",
@@ -37,6 +41,10 @@ const dark = {
   tealTint: "#143D3C",
   error: "#FFADB8",
   overlay: "rgba(0,0,0,0.7)",
+  navBg: "#1A2947",
+  navSelected: "#304770",
+  navActive: "#BCEFD8",
+  navMuted: "#B8C5DF",
 };
 export type Colors = typeof light;
 const ThemeContext = createContext({

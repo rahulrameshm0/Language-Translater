@@ -3,18 +3,18 @@
     "name": "Vaylo",
     "slug": "three-words-translator",
     "scheme": "threewords",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.threewords.translator",
-      "buildNumber": "4"
+      "buildNumber": "5"
     },
     "android": {
       "package": "com.threewords.translator",
       "icon": "./assets/icon.png",
-      "versionCode": 4,
+      "versionCode": 5,
       "softwareKeyboardLayoutMode": "resize"
     },
     "plugins": [

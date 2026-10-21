@@ -1,3 +1,35 @@
+export const supportedLanguages = [
+  "en",
+  "es",
+  "hy",
+  "de",
+  "fr",
+  "it",
+  "pt",
+  "ru",
+  "uk",
+  "pl",
+  "nl",
+  "sv",
+  "no",
+  "da",
+  "fi",
+  "el",
+  "tr",
+  "ar",
+  "he",
+  "fa",
+  "hi",
+  "bn",
+  "ta",
+  "te",
+  "kn",
+  "ja",
+  "ko",
+  "zh",
+  "id",
+  "vi",
+] as const;
 export type TranslationInput = {
   sourceLanguage: string;
   targetLanguage: string;
@@ -11,8 +43,12 @@ export function validate(body: unknown): TranslationInput {
   const { text, audioBase64, mimeType, sourceLanguage, targetLanguage } =
     body as Record<string, unknown>;
   if (
-    !["en", "es", "hy", "de"].includes(String(sourceLanguage)) ||
-    !["en", "es", "hy", "de"].includes(String(targetLanguage)) ||
+    !(supportedLanguages as readonly string[]).includes(
+      String(sourceLanguage),
+    ) ||
+    !(supportedLanguages as readonly string[]).includes(
+      String(targetLanguage),
+    ) ||
     sourceLanguage === targetLanguage
   )
     throw new Error("Choose two different supported languages.");

@@ -4,7 +4,7 @@
 
 [Download the latest Android APK](https://github.com/rahulrameshm0/vaylo-downloads/releases/latest)
 
-Android and iOS text and voice translator for English, Spanish, Armenian, and German. Includes light, dark, and system themes, a keyboard-aware translation workspace, and manual APK installation. Expo + TypeScript, Supabase Auth/PostgreSQL, and Gemini 3.5 Flash-Lite on its free API tier. There is no demo login, local database substitute, or fake translation fallback.
+Android and iOS text and voice translator with 30 languages. Includes light, dark, and system themes, a keyboard-aware translation workspace, and manual APK installation. Expo + TypeScript, Supabase Auth/PostgreSQL, and Gemini 3.5 Flash-Lite on its free API tier. There is no demo login, local database substitute, or fake translation fallback.
 
 ## Start
 
@@ -38,9 +38,9 @@ Auth owns user credentials. The public history table references `auth.users`; it
 
 The backend uses the [Gemini generateContent REST API](https://ai.google.dev/api/generate-content), with a separate translation instruction and JSON output schema. It rejects blocked, truncated, malformed, and empty output before saving history. The fixed model is `gemini-3.5-flash-lite`, currently listed with free input/output on [Google's pricing page](https://ai.google.dev/gemini-api/docs/pricing). Recheck model availability and free-tier eligibility when deploying; the API cannot tell this app whether you have enabled paid billing. Keep the project on the Free tier to prevent paid API usage. Supabase also has free-plan limits; check [its pricing](https://supabase.com/pricing) before public release.
 
-The function accepts `{text, sourceLanguage, targetLanguage}` and returns `{originalText, translatedText, historyRecordId, warning}`. Voice requests use `{audioBase64, mimeType, sourceLanguage, targetLanguage}` instead of text, with MP4/M4A audio bounded to 2.1 MB in the client and base64 length 2,800,000 on the server. Language codes are `en`, `es`, `hy`, and `de`. Malayalam is no longer offered for new translations; previous Malayalam history remains readable and deletable. Empty text, identical languages, and inputs exceeding 5,000 Unicode code points are rejected. Each verified user gets 30 requests per UTC calendar minute, including failed provider requests. Limits are atomic across function instances and reset at the next minute boundary. Gemini requests time out after 45 seconds. Failed history writes return the translation with a warning and a null history ID.
+The function accepts `{text, sourceLanguage, targetLanguage}` and returns `{originalText, translatedText, historyRecordId, warning}`. Voice requests use `{audioBase64, mimeType, sourceLanguage, targetLanguage}` instead of text, with MP4/M4A audio bounded to 2.1 MB in the client and base64 length 2,800,000 on the server. The 30 language codes are defined in `src/languages.ts`; automated tests verify they match the backend allowlist. Malayalam is no longer offered for new translations; previous Malayalam history remains readable and deletable. Empty text, identical languages, and inputs exceeding 5,000 Unicode code points are rejected. Each verified user gets 30 requests per UTC calendar minute, including failed provider requests. Limits are atomic across function instances and reset at the next minute boundary. Gemini requests time out after 45 seconds. Failed history writes return the translation with a warning and a null history ID.
 
-In version 1.2, reviewed text is sent to Google Gemini and the source text plus translation are saved to the user's Supabase history. Live speech uses the phone's recognition service; see the live-speech section below. The legacy audio endpoint remains available for older clients. Audio is not stored in PostgreSQL. Read-aloud uses installed device voices; some devices have no Armenian voice. Google's Gemini free-tier content may be used to improve its products; avoid sensitive text. AI translations can be inaccurate, so test all four languages’ quality before relying on them. Users can delete individual records. Choose service regions, retention, and privacy terms appropriate to your deployment before public distribution.
+In version 1.2, reviewed text is sent to Google Gemini and the source text plus translation are saved to the user's Supabase history. Live speech uses the phone's recognition service; see the live-speech section below. The legacy audio endpoint remains available for older clients. Audio is not stored in PostgreSQL. Read-aloud uses installed device voices; some devices have no Armenian voice. Google's Gemini free-tier content may be used to improve its products; avoid sensitive text. AI translations can be inaccurate, so test your chosen languages’ quality before relying on them. Users can delete individual records. Choose service regions, retention, and privacy terms appropriate to your deployment before public distribution.
 
 ## Builds
 
@@ -66,7 +66,7 @@ Device acceptance checklist after service configuration:
 
 1. Register two accounts; confirm email links on the requesting device. Confirm unverified users cannot sign in.
 2. Sign in, restart the app, and confirm the session restores. Send a password reset, open the link, update the password, sign out, and sign in using the new password. Test expired links.
-3. Translate in all twelve directions, including Armenian input/output and emoji. Copy results, swap languages, and reopen a history record.
+3. Translate in all 870 directions, including Armenian input/output and emoji. Copy results, swap languages, and reopen a history record.
 4. Create more than 20 records; load more and refresh. Delete a record. Confirm the other account sees none of the first account's history.
 5. Disable networking; confirm input survives failures. Exercise a provider error, the minute limit, and a failed history write in a development environment; verify the result remains visible for the latter.
 6. Check keyboard behavior, large system text, screen-reader labels, and Armenian glyph rendering on both Android and iOS.
@@ -95,4 +95,12 @@ Tap Speak, choose the source language, and tap the microphone. Interim words app
 
 Speech recognition uses the phone's installed recognition service and may send audio to Apple/Google depending on device settings. No paid speech API or server transcription loop was added. Device/language support varies, particularly Armenian. Android 12 and earlier may finish after an utterance; tap the microphone again to start a fresh draft. This version does not persist audio clips. Only confirmed text is sent to Gemini and stored with its translation in Supabase. The backend retains its older bounded audio endpoint for older clients.
 
-Device acceptance: test all four source languages on Android and iOS; verify partial words update without duplication, stop retains the last words, edit corrections, confirm before translation, retry after network failure without losing edits, deny permissions, background while listening, and test a missing speech language. Native microphone and service behavior cannot be established by JavaScript tests alone.
+Device acceptance: test your chosen source languages on Android and iOS; verify partial words update without duplication, stop retains the last words, edit corrections, confirm before translation, retry after network failure without losing edits, deny permissions, background while listening, and test a missing speech language. Native microphone and service behavior cannot be established by JavaScript tests alone.
+
+## Vaylo 1.3
+
+Thirty languages: English, Spanish, Armenian, German, French, Italian, Portuguese, Russian, Ukrainian, Polish, Dutch, Swedish, Norwegian, Danish, Finnish, Greek, Turkish, Arabic, Hebrew, Persian, Hindi, Bengali, Tamil, Telugu, Kannada, Japanese, Korean, Chinese, Indonesian, and Vietnamese.
+
+The searchable picker matches English/native names and codes, with accent-insensitive Latin search. Arabic, Hebrew and Persian text aligns right. Device speech/read-aloud availability varies by language and phone; typing remains available for all 30. The refreshed UI bundles Outfit fonts and introduces a cobalt language cover, native-script tiles, integrated controls and a contrasting floating navigation bar.
+
+Migration `202610220001` expands history constraints and retains old Malayalam records. It was applied through the dashboard; include it when repairing migration history before a future CLI push. Web rendering dependencies are development tools for isolated visual checks, not simulated services in the native app.
