@@ -1,0 +1,12 @@
+node_modules/
+.expo/
+dist/
+.git/
+.env
+.env.*
+**/.env
+**/.env.*
+supabase/
+tests/
+VERIFICATION.md
+DESIGN.md

@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Vaylo",
+    "slug": "three-words-translator",
+    "scheme": "threewords",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.threewords.translator"
+    },
+    "android": {
+      "package": "com.threewords.translator",
+      "icon": "./assets/icon.png"
+    },
+    "plugins": [
+      "expo-secure-store"
+    ],
+    "owner": "rahulrameshm0-threewords",
+    "extra": {
+      "eas": {
+        "projectId": "e77aa483-7ec9-46b6-a208-3fa02ab82b7d"
+      }
+    },
+    "icon": "./assets/icon.png"
+  }
+}

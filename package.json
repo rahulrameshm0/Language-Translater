@@ -1,0 +1,37 @@
+{
+  "name": "vaylo",
+  "version": "1.0.0",
+  "private": true,
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "typecheck": "tsc --noEmit",
+    "test": "deno test --allow-env --node-modules-dir=manual tests/",
+    "check:function": "deno check --node-modules-dir=manual supabase/functions/translate/index.ts",
+    "test:database": "node tests/database.mjs",
+    "format": "prettier --write App.tsx src tests/*.ts tests/*.mjs supabase/functions/translate/*.ts",
+    "format:check": "prettier --check App.tsx src tests/*.ts tests/*.mjs supabase/functions/translate/*.ts",
+    "eas-build-post-install": "node scripts/check-build-env.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.118.0",
+    "expo": "~55.0.0",
+    "expo-clipboard": "~55.0.0",
+    "expo-constants": "~55.0.17",
+    "expo-linking": "~55.0.0",
+    "expo-secure-store": "~55.0.0",
+    "expo-status-bar": "~55.0.0",
+    "react": "19.2.0",
+    "react-native": "0.83.10",
+    "react-native-safe-area-context": "~5.6.2",
+    "react-native-url-polyfill": "^2.0.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.10",
+    "@types/react": "~19.2.0",
+    "prettier": "^3.9.10",
+    "typescript": "~5.9.2"
+  }
+}

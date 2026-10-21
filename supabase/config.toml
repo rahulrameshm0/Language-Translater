@@ -1,0 +1,10 @@
+project_id = "three-words"
+[auth]
+site_url = "threewords://auth/callback"
+additional_redirect_urls = ["threewords://auth/callback", "threewords://auth/reset"]
+enable_signup = true
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+[functions.translate]
+verify_jwt = false

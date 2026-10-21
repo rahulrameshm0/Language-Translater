@@ -1,0 +1,14 @@
+node_modules/
+.expo/
+dist/
+.env
+.env.*
+!.env.example
+supabase/.temp/
+
+# Local signing material
+credentials.json
+*.jks
+*.keystore
+*.p12
+*.mobileprovision
