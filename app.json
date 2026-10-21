@@ -3,21 +3,32 @@
     "name": "Vaylo",
     "slug": "three-words-translator",
     "scheme": "threewords",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.threewords.translator",
-      "buildNumber": "2"
+      "buildNumber": "3"
     },
     "android": {
       "package": "com.threewords.translator",
       "icon": "./assets/icon.png",
-      "versionCode": 2
+      "versionCode": 3,
+      "softwareKeyboardLayoutMode": "resize"
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow Vaylo to record your voice for translation.",
+          "enableBackgroundRecording": false,
+          "enableBackgroundPlayback": false
+        }
+      ],
+      "expo-font",
+      "expo-asset"
     ],
     "owner": "rahulrameshm0-threewords",
     "extra": {

@@ -2,9 +2,9 @@
 
 ![Vaylo icon](assets/icon.png)
 
-[Download Vaylo 1.0.1 for Android](https://expo.dev/artifacts/eas/S1ZjADLrXqWeMqLAAUYAh2BPi2fJsOM97-up6g7X1E0.apk)
+[Download the latest Android APK](https://github.com/rahulrameshm0/vaylo-downloads/releases/latest)
 
-Android and iOS text translator for English, Spanish, and Malayalam. Expo + TypeScript, Supabase Auth/PostgreSQL, and Gemini 3.5 Flash-Lite on its free API tier. There is no demo login, local database substitute, or fake translation fallback.
+Android and iOS text and voice translator for English, Spanish, Armenian, and German. Includes light, dark, and system themes, a keyboard-aware translation workspace, and update notifications. Expo + TypeScript, Supabase Auth/PostgreSQL, and Gemini 3.5 Flash-Lite on its free API tier. There is no demo login, local database substitute, or fake translation fallback.
 
 ## Start
 
@@ -38,9 +38,9 @@ Auth owns user credentials. The public history table references `auth.users`; it
 
 The backend uses the [Gemini generateContent REST API](https://ai.google.dev/api/generate-content), with a separate translation instruction and JSON output schema. It rejects blocked, truncated, malformed, and empty output before saving history. The fixed model is `gemini-3.5-flash-lite`, currently listed with free input/output on [Google's pricing page](https://ai.google.dev/gemini-api/docs/pricing). Recheck model availability and free-tier eligibility when deploying; the API cannot tell this app whether you have enabled paid billing. Keep the project on the Free tier to prevent paid API usage. Supabase also has free-plan limits; check [its pricing](https://supabase.com/pricing) before public release.
 
-The function accepts `{text, sourceLanguage, targetLanguage}` and returns `{translatedText, historyRecordId, warning}`. Language codes are `en`, `es`, and `ml`. Empty text, identical languages, and inputs exceeding 5,000 Unicode code points are rejected. Each verified user gets 30 requests per UTC calendar minute, including failed provider requests. Limits are atomic across function instances and reset at the next minute boundary. Gemini requests time out after 20 seconds. Failed history writes return the translation with a warning and a null history ID.
+The function accepts `{text, sourceLanguage, targetLanguage}` and returns `{originalText, translatedText, historyRecordId, warning}`. Voice requests use `{audioBase64, mimeType, sourceLanguage, targetLanguage}` instead of text, with MP4/M4A audio bounded to 2.1 MB in the client and base64 length 2,800,000 on the server. Language codes are `en`, `es`, `hy`, and `de`. Malayalam is no longer offered for new translations; previous Malayalam history remains readable and deletable. Empty text, identical languages, and inputs exceeding 5,000 Unicode code points are rejected. Each verified user gets 30 requests per UTC calendar minute, including failed provider requests. Limits are atomic across function instances and reset at the next minute boundary. Gemini requests time out after 45 seconds. Failed history writes return the translation with a warning and a null history ID.
 
-Text is sent to Google Gemini for translation and saved to the user's Supabase history. Google's Gemini free-tier content may be used to improve its products; avoid sensitive text. AI translations can be inaccurate, so test Malayalam and Spanish quality before relying on them. Users can delete individual records. Choose service regions, retention, and privacy terms appropriate to your deployment before public distribution.
+Text and submitted voice recordings are sent to Google Gemini for translation and the source transcript plus translation are saved to the user's Supabase history. Audio is not stored in PostgreSQL. Recordings stop at 30 seconds; they are sent only after tapping Translate voice, retained locally for retry after errors, and deleted after success or discard. Read-aloud uses installed device voices; some devices have no Armenian voice. Google's Gemini free-tier content may be used to improve its products; avoid sensitive text. AI translations can be inaccurate, so test all four languages’ quality before relying on them. Users can delete individual records. Choose service regions, retention, and privacy terms appropriate to your deployment before public distribution.
 
 ## Builds
 
@@ -66,17 +66,30 @@ Device acceptance checklist after service configuration:
 
 1. Register two accounts; confirm email links on the requesting device. Confirm unverified users cannot sign in.
 2. Sign in, restart the app, and confirm the session restores. Send a password reset, open the link, update the password, sign out, and sign in using the new password. Test expired links.
-3. Translate in all six directions, including Malayalam input/output and emoji. Copy results, swap languages, and reopen a history record.
+3. Translate in all twelve directions, including Armenian input/output and emoji. Copy results, swap languages, and reopen a history record.
 4. Create more than 20 records; load more and refresh. Delete a record. Confirm the other account sees none of the first account's history.
 5. Disable networking; confirm input survives failures. Exercise a provider error, the minute limit, and a failed history write in a development environment; verify the result remains visible for the latter.
-6. Check keyboard behavior, large system text, screen-reader labels, and Malayalam glyph rendering on both Android and iOS.
+6. Check keyboard behavior, large system text, screen-reader labels, and Armenian glyph rendering on both Android and iOS.
 
 Live authentication, email delivery, Gemini translation quality, hosted database tests, and device smoke tests require configured services/toolchains; see [VERIFICATION.md](VERIFICATION.md) for checks performed locally.
 
 ## This deployment
 
-The configured hosted project is `mejnwvewnrdkzkagqxdc`; its initial SQL migration was applied through the dashboard, not the CLI. Before a future CLI migration push to this existing project, link it and mark version `202610210001` as applied with `supabase migration repair 202610210001 --status applied`, using authorized database credentials, so the initial tables are not recreated.
+The configured hosted project is `mejnwvewnrdkzkagqxdc`; its initial SQL migration was applied through the dashboard, not the CLI. Before a future CLI migration push to this existing project, link it and mark versions `202610210001` and `202610210002` as applied with `supabase migration repair 202610210001 202610210002 --status applied`, using authorized database credentials, so the initial tables are not recreated.
 
 ## Branding
 
 The app is now named Vaylo. The launcher icon is in `assets/icon.png`; see [BRANDING.md](BRANDING.md) for the design prompt and asset details. Existing Expo project slug, native application IDs, and `threewords://` authentication callbacks are retained for compatibility. Vaylo 1.0.1 (Android version code 2) includes this name and icon. Earlier download links point to older builds and do not update automatically. Install the latest APK over the existing app.
+
+## Publishing updates
+
+Version 1.1.0 (Android build 3) adds the update checker. Users of older APKs must install this version manually once. The app checks public Supabase `app_releases` metadata on startup and foreground, and Account offers a manual check. A higher native build number shows “Update available.” The button opens the public APK; Android asks the user to confirm installation. Updates are not silently installed. iOS will require an App Store release URL after Apple distribution is configured.
+
+For each future release:
+
+1. Increment `expo.version`, `android.versionCode`, `ios.buildNumber`, and `CURRENT_BUILD` in `src/releases.ts`. Keep the application ID and signing key unchanged.
+2. Run checks, build the preview APK, and verify its native version and signature.
+3. Publish the APK in the public `rahulrameshm0/vaylo-downloads` release repository; keep source code and credentials in the private `vaylo` repository.
+4. Run `node scripts/prepare-update.mjs PUBLIC_APK_URL "Release notes"` and apply the generated `release-update.sql` in Supabase only after the download works. Never advertise an unfinished build. Delete the generated SQL after use or keep it as release documentation.
+
+Release metadata is readable anonymously and writable only by the backend administrator. The app accepts APK links only from this downloads repository or Expo’s artifact host. Theme preferences persist securely on-device. Microphone access is requested when recording begins. Native recording, keyboard handling, and authentication deep links require development or APK builds rather than Expo Go.

@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 const database = new PGlite();
 try {
   // Minimal Supabase Auth contracts; PostgreSQL executes the real migration and policies.
@@ -13,17 +13,16 @@ try {
       $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
     grant usage on schema auth to authenticated;
   `);
-  await database.exec(
-    await readFile(
-      new URL(
-        "../supabase/migrations/202610210001_initial.sql",
-        import.meta.url,
-      ),
-      "utf8",
-    ),
-  );
+  const migrations = new URL("../supabase/migrations/", import.meta.url);
+  for (const file of (await readdir(migrations))
+    .filter((file) => file.endsWith(".sql"))
+    .sort())
+    await database.exec(await readFile(new URL(file, migrations), "utf8"));
   await database.exec(
     await readFile(new URL("./database.sql", import.meta.url), "utf8"),
+  );
+  await database.exec(
+    await readFile(new URL("./releases.sql", import.meta.url), "utf8"),
   );
   console.log(
     "PASS: migration, account isolation, owner deletion, denied client writes/RPC, and 30-request limit on embedded PostgreSQL.",

@@ -14,10 +14,11 @@ type Scenario = {
   finishReason?: string;
   blocked?: boolean;
   missingKey?: boolean;
+  transcript?: string;
 };
 async function run(
   scenario: Scenario,
-  body: unknown = { text: "Hello", sourceLanguage: "en", targetLanguage: "ml" },
+  body: unknown = { text: "Hello", sourceLanguage: "en", targetLanguage: "hy" },
   token = true,
 ) {
   Deno.env.set("SUPABASE_URL", "https://test.supabase.co");
@@ -48,9 +49,18 @@ async function run(
         new Headers(init?.headers).get("X-goog-api-key") === "test-gemini-key",
       );
       const request = JSON.parse(String(init?.body));
-      assert(
-        request.contents[0].parts[0].text === (body as { text: string }).text,
-      );
+      if ((body as { audioBase64?: string }).audioBase64) {
+        assert(
+          request.contents[0].parts[0].inlineData.data ===
+            (body as { audioBase64: string }).audioBase64,
+        );
+        assert(
+          request.contents[0].parts[0].inlineData.mimeType === "audio/mp4",
+        );
+      } else
+        assert(
+          request.contents[0].parts[0].text === (body as { text: string }).text,
+        );
       assert(
         request.systemInstruction.parts[0].text.includes("never instructions"),
       );
@@ -69,7 +79,10 @@ async function run(
                 {
                   text: scenario.malformed
                     ? "not json"
-                    : JSON.stringify({ translatedText: "നമസ്കാരം" }),
+                    : JSON.stringify({
+                        originalText: scenario.transcript ?? "Hello",
+                        translatedText: "Բարև",
+                      }),
                 },
               ],
             },
@@ -103,10 +116,10 @@ async function run(
   }
 }
 Deno.test(
-  "backend translates all six directions and persists verified ownership",
+  "backend translates all twelve directions and persists verified ownership",
   async () => {
-    for (const sourceLanguage of ["en", "es", "ml"])
-      for (const targetLanguage of ["en", "es", "ml"])
+    for (const sourceLanguage of ["en", "es", "hy", "de"])
+      for (const targetLanguage of ["en", "es", "hy", "de"])
         if (sourceLanguage !== targetLanguage) {
           const result = await run(
             {},
@@ -114,7 +127,7 @@ Deno.test(
           );
           assert(result.status === 200);
           assert(result.body.historyRecordId === "saved-id");
-          assert(result.body.translatedText === "നമസ്കാരം");
+          assert(result.body.translatedText === "Բարև");
         }
   },
 );
@@ -133,7 +146,7 @@ Deno.test(
 Deno.test("invalid input and rate limits do not call provider", async () => {
   const invalid = await run(
     {},
-    { text: "", sourceLanguage: "en", targetLanguage: "ml" },
+    { text: "", sourceLanguage: "en", targetLanguage: "hy" },
   );
   assert(invalid.status === 400);
   const limited = await run({ allowed: false });
@@ -150,7 +163,7 @@ Deno.test(
 Deno.test("history failure preserves translation with a warning", async () => {
   const result = await run({ saveFailure: true });
   assert(result.status === 200);
-  assert(result.body.translatedText === "നമസ്കാരം");
+  assert(result.body.translatedText === "Բարև");
   assert(result.body.historyRecordId === null);
   assert(result.body.warning);
 });
@@ -191,3 +204,36 @@ Deno.test(
     assert(!result.calls.some((url) => url.includes("googleapis")));
   },
 );
+
+Deno.test(
+  "voice input is transcribed, translated, and saved as text only",
+  async () => {
+    const result = await run(
+      {},
+      {
+        audioBase64: "QUFBQQ==",
+        mimeType: "audio/mp4",
+        sourceLanguage: "en",
+        targetLanguage: "de",
+      },
+    );
+    assert(result.status === 200);
+    assert(result.body.originalText === "Hello");
+    assert(result.body.historyRecordId === "saved-id");
+  },
+);
+Deno.test("silent or overlong transcripts do not enter history", async () => {
+  for (const transcript of ["", "a".repeat(5001)]) {
+    const result = await run(
+      { transcript },
+      {
+        audioBase64: "QUFBQQ==",
+        mimeType: "audio/mp4",
+        sourceLanguage: "en",
+        targetLanguage: "hy",
+      },
+    );
+    assert(result.status === 422);
+    assert(!result.calls.some((url) => url.includes("/rest/v1/translations")));
+  }
+});
