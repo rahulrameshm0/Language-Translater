@@ -3,16 +3,18 @@
     "name": "Vaylo",
     "slug": "three-words-translator",
     "scheme": "threewords",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.threewords.translator"
+      "bundleIdentifier": "com.threewords.translator",
+      "buildNumber": "2"
     },
     "android": {
       "package": "com.threewords.translator",
-      "icon": "./assets/icon.png"
+      "icon": "./assets/icon.png",
+      "versionCode": 2
     },
     "plugins": [
       "expo-secure-store"
