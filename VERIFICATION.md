@@ -1,11 +1,11 @@
 # Verification — Vaylo 1.1.0
 
-Upgrade: English, Spanish, Armenian, and German; text and voice translation; light/dark/system themes; keyboard-aware input; release notices and APK downloads.
+Upgrade: English, Spanish, Armenian, and German; text and voice translation; light/dark/system themes; keyboard-aware input; manual APK installation.
 
 ## Passed
 
 - TypeScript (`npm run typecheck`), formatting, and Edge Function type checking.
-- All 17 Deno tests: twelve language directions, Unicode bounds, audio validation/transcription, silence/overlong transcripts, authentication, atomic rate-limit handling, provider errors/timeouts/quota, malformed/blocked/truncated responses, history-save warnings, and safe release URL/build-number handling. External Auth, database, and provider responses are mocked in these tests.
+- All 14 Deno tests: twelve language directions, Unicode bounds, audio validation/transcription, silence/overlong transcripts, authentication, atomic rate-limit handling, provider errors/timeouts/quota, malformed/blocked/truncated responses, history-save warnings. External Auth, database, and provider responses are mocked in these tests.
 - PostgreSQL tests execute both actual migrations and RLS assertions in PGlite: account isolation, owner deletion, denied client history inserts and rate-limit RPC calls, the 30-request limit, Armenian/German history, anonymous release discovery, and denied release writes.
 - Both migrations applied to hosted Supabase. New `tests/releases.sql` assertions also ran successfully in the hosted SQL editor in a rolled-back transaction. Earlier ownership/rate-limit SQL assertions passed on the hosted database.
 - Updated authenticated text/audio Edge Function deployed through Supabase dashboard. Explicit user-token verification remains required; legacy gateway JWT verification remains disabled for publishable-key compatibility.
@@ -26,9 +26,9 @@ Voice recordings are capped at 30 seconds on-device and bounded by payload size 
 
 ## Release process
 
-Version 1.1.0 is Android build 3. The existing package ID and Expo-managed signing key are reused. The old 1.0.1 APK has no update checker; install 1.1.0 manually once. Later builds compare the hosted `app_releases.build_number` with the native build and offer a download. Android retains control of installation approval.
+Version 1.1.0 is Android build 3. The existing package ID and Expo-managed signing key are reused. In-app update checking and download controls were removed at the user's request. Updates are installed manually from the public APK release page. Expo builds and configured services remain on free tiers, subject to queues and quotas.
 
-Only publish release metadata after verifying the APK download. Source remains private in `rahulrameshm0/vaylo`; APK releases are public in `rahulrameshm0/vaylo-downloads`.
+Publish APKs only after verifying the download. Source remains private in `rahulrameshm0/vaylo`; APK releases are public in `rahulrameshm0/vaylo-downloads`.
 
 ## Dependency audit limitation
 

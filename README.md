@@ -4,7 +4,7 @@
 
 [Download the latest Android APK](https://github.com/rahulrameshm0/vaylo-downloads/releases/latest)
 
-Android and iOS text and voice translator for English, Spanish, Armenian, and German. Includes light, dark, and system themes, a keyboard-aware translation workspace, and update notifications. Expo + TypeScript, Supabase Auth/PostgreSQL, and Gemini 3.5 Flash-Lite on its free API tier. There is no demo login, local database substitute, or fake translation fallback.
+Android and iOS text and voice translator for English, Spanish, Armenian, and German. Includes light, dark, and system themes, a keyboard-aware translation workspace, and manual APK installation. Expo + TypeScript, Supabase Auth/PostgreSQL, and Gemini 3.5 Flash-Lite on its free API tier. There is no demo login, local database substitute, or fake translation fallback.
 
 ## Start
 
@@ -81,15 +81,8 @@ The configured hosted project is `mejnwvewnrdkzkagqxdc`; its initial SQL migrati
 
 The app is now named Vaylo. The launcher icon is in `assets/icon.png`; see [BRANDING.md](BRANDING.md) for the design prompt and asset details. Existing Expo project slug, native application IDs, and `threewords://` authentication callbacks are retained for compatibility. Vaylo 1.0.1 (Android version code 2) includes this name and icon. Earlier download links point to older builds and do not update automatically. Install the latest APK over the existing app.
 
-## Publishing updates
+## Manual updates and free services
 
-Version 1.1.0 (Android build 3) adds the update checker. Users of older APKs must install this version manually once. The app checks public Supabase `app_releases` metadata on startup and foreground, and Account offers a manual check. A higher native build number shows “Update available.” The button opens the public APK; Android asks the user to confirm installation. Updates are not silently installed. iOS will require an App Store release URL after Apple distribution is configured.
+The app does not check for updates or show update/download buttons. Download a newer APK from the public releases page and install it manually over Vaylo. Keep the package ID and signing key unchanged, and increase the Android version code for each release.
 
-For each future release:
-
-1. Increment `expo.version`, `android.versionCode`, `ios.buildNumber`, and `CURRENT_BUILD` in `src/releases.ts`. Keep the application ID and signing key unchanged.
-2. Run checks, build the preview APK, and verify its native version and signature.
-3. Publish the APK in the public `rahulrameshm0/vaylo-downloads` release repository; keep source code and credentials in the private `vaylo` repository.
-4. Run `node scripts/prepare-update.mjs PUBLIC_APK_URL "Release notes"` and apply the generated `release-update.sql` in Supabase only after the download works. Never advertise an unfinished build. Delete the generated SQL after use or keep it as release documentation.
-
-Release metadata is readable anonymously and writable only by the backend administrator. The app accepts APK links only from this downloads repository or Expo’s artifact host. Theme preferences persist securely on-device. Microphone access is requested when recording begins. Native recording, keyboard handling, and authentication deep links require development or APK builds rather than Expo Go.
+Builds remain on Expo’s free tier, which may queue before compiling. Supabase and Gemini remain on their configured free tiers; usage is limited by their quotas. No paid plan or fallback is enabled. The historical app_releases database table is unused by the app.

@@ -22,7 +22,6 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { StatusBar } from "expo-status-bar";
 import * as Clipboard from "expo-clipboard";
 import * as Speech from "expo-speech";
-import * as Linking from "expo-linking";
 import Constants from "expo-constants";
 import { configured, supabase } from "./src/supabase";
 import {
@@ -35,7 +34,6 @@ import {
 import { Colors, ThemePreference, ThemeProvider, useTheme } from "./src/theme";
 import { useTranslator } from "./src/useTranslator";
 import { useVoice } from "./src/useVoice";
-import { useAppUpdate } from "./src/useAppUpdate";
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
 function Icon({
   name,
@@ -137,12 +135,10 @@ function Application() {
   const { colors: c, dark, preference, setPreference } = useTheme();
   const s = useMemo(() => styles(c), [c]);
   const voice = useVoice(a.setMessage);
-  const update = useAppUpdate();
   const [inputMode, setInputMode] = useState<"text" | "voice">("text");
   const [picker, setPicker] = useState<"source" | "target" | null>(null);
   const [keyboard, setKeyboard] = useState(false);
   const [speaking, setSpeaking] = useState(false);
-  const [dismissedUpdate, setDismissedUpdate] = useState<number | null>(null);
   const [sendingAudio, setSendingAudio] = useState(false);
   const locked = a.busy || voice.recording || voice.working || sendingAudio;
   useEffect(() => {
@@ -234,15 +230,6 @@ function Application() {
       setSendingAudio(false);
     }
   }
-  async function downloadUpdate() {
-    try {
-      await update.download();
-    } catch {
-      a.setMessage(
-        "Could not open the update link. Check your connection and try again.",
-      );
-    }
-  }
   function openHistory(item: Translation) {
     if (
       !isLanguage(item.source_language) ||
@@ -282,32 +269,6 @@ function Application() {
           onPress={() => setPreference(dark ? "light" : "dark")}
         />
       </View>
-      {update.status === "available" &&
-        update.release &&
-        dismissedUpdate !== update.release.build_number && (
-          <View style={s.update}>
-            <View style={{ flex: 1, gap: 3 }}>
-              <Text style={s.updateTitle}>
-                Update available · {update.release.version}
-              </Text>
-              <Text style={s.caption}>A fresh version of Vaylo is ready.</Text>
-            </View>
-            <Action
-              label="Update"
-              small
-              icon="download-outline"
-              onPress={() => void downloadUpdate()}
-            />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Dismiss update notice"
-              onPress={() => setDismissedUpdate(update.release!.build_number)}
-              style={{ padding: 8 }}
-            >
-              <Icon name="close" size={20} />
-            </Pressable>
-          </View>
-        )}
       {!configured ? (
         <View style={s.center}>
           <Icon name="cloud-offline-outline" size={42} />
@@ -949,42 +910,9 @@ function Application() {
                     </View>
                   </View>
                   <Text style={s.body}>
-                    {update.status === "available"
-                      ? `Version ${update.release?.version} is ready to download.`
-                      : update.status === "current"
-                        ? "You’re using the latest version."
-                        : update.status === "checking"
-                          ? "Checking for a new version…"
-                          : update.status === "error"
-                            ? "Couldn’t check for updates. Try again when you’re online."
-                            : "No newer release is listed for this device yet."}
+                    Install new versions manually using the Android APK
+                    download.
                   </Text>
-                  {update.status === "available" && update.release?.notes ? (
-                    <Text style={s.caption}>{update.release.notes}</Text>
-                  ) : null}
-                  <Action
-                    label={
-                      update.status === "available"
-                        ? "Download update"
-                        : "Check for updates"
-                    }
-                    icon={
-                      update.status === "available"
-                        ? "download-outline"
-                        : "refresh-outline"
-                    }
-                    disabled={update.status === "checking"}
-                    onPress={() => {
-                      if (update.status === "available") void downloadUpdate();
-                      else void update.check(true);
-                    }}
-                  />
-                  {update.status === "available" && (
-                    <Text style={s.footnote}>
-                      Your browser downloads the APK. Android will ask you to
-                      confirm installation.
-                    </Text>
-                  )}
                 </View>
                 <View style={s.panel}>
                   <View style={s.inline}>
@@ -1455,17 +1383,6 @@ const styles = (c: Colors) =>
       alignItems: "flex-start",
     },
     noticeText: { color: c.ink, fontSize: 14, lineHeight: 22, flex: 1 },
-    update: {
-      backgroundColor: c.tint,
-      marginHorizontal: 15,
-      marginTop: 12,
-      padding: 12,
-      borderRadius: 16,
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-    },
-    updateTitle: { fontSize: 13, color: c.ink, fontWeight: "700" },
     modalBackdrop: { flex: 1, backgroundColor: c.overlay },
     sheet: {
       backgroundColor: c.surface,
