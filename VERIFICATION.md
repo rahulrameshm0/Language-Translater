@@ -1,4 +1,15 @@
-# LingoBridge 1.5 verification
+# LingoBridge 1.6 verification
+
+Version 1.6.0 / build 8 adds a real AI language Assistant and conversational speaking with recorded replies, attached feedback and follow-up questions.
+
+- TypeScript, backend checks, 41 automated tests and embedded PostgreSQL checks pass. Android/iOS Hermes exports pass.
+- Live Gemini checks with synthetic Spanish text returned an opening, correction, specific feedback and a contextual follow-up. Full authenticated mobile audio end-to-end testing remains outstanding.
+- The conversation migration and rolled-back cross-account read/update/delete/insert and anonymous-access assertions passed on hosted Supabase. The updated function is deployed.
+- Actual React Native screens were reviewed at constrained phone width in a temporary web harness. Its synthetic provider fixtures are outside the repo/APK. Browser TTS reported an output error; physical-device recording/TTS, audio routing and background behavior still require acceptance.
+- Conversation audio is replayable during the current screen session and is not persisted to Supabase. Saved chats retain text/feedback only.
+- No new paid service or in-app updater. Existing SMTP, dependency advisory and iOS distribution limitations below remain.
+
+## Previous 1.5 verification
 
 Version 1.5.0 / native build 7 adds the reference-inspired charcoal interface, earphone turn translation, private vocabulary study and guided speaking practice. The package ID and signing key are retained.
 

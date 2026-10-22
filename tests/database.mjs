@@ -30,6 +30,9 @@ try {
   await database.exec(
     await readFile(new URL("./learning.sql", import.meta.url), "utf8"),
   );
+  await database.exec(
+    await readFile(new URL("./conversations.sql", import.meta.url), "utf8"),
+  );
   console.log(
     "PASS: migration, account isolation, owner deletion, denied client writes/RPC, and 30-request limit on embedded PostgreSQL.",
   );

@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
+import { validateAI, answerAI, AIInput } from "./assistant.ts";
 import { validate } from "./validation.ts";
 import { validateMedia, extractMedia, MediaInput } from "./media.ts";
 const headers = {
@@ -29,6 +30,7 @@ export async function handler(req: Request): Promise<Response> {
     if (authError || !user)
       return reply(401, { error: "Your session expired. Sign in again." });
     let input;
+    let ai: AIInput | null = null;
     let media: MediaInput | null = null;
     try {
       const raw = await req.text();
@@ -37,7 +39,8 @@ export async function handler(req: Request): Promise<Response> {
           error: "File is too large. Choose a file smaller than 8 MB.",
         });
       const body = JSON.parse(raw);
-      if (body?.action === "extract") media = validateMedia(body);
+      if (body?.action === "assistant") ai = validateAI(body);
+      else if (body?.action === "extract") media = validateMedia(body);
       else input = validate(body);
     } catch (e) {
       return reply(400, { error: (e as Error).message });
@@ -61,6 +64,10 @@ export async function handler(req: Request): Promise<Response> {
         error:
           "Translation service is not configured. Contact the app administrator.",
       });
+    if (ai) {
+      const result = await answerAI(ai, apiKey);
+      return reply(result.status, result.body);
+    }
     if (media) {
       const result = await extractMedia(media, apiKey);
       return reply(result.status, result.body);

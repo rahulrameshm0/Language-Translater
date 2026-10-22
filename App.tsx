@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -50,7 +50,7 @@ import {
   SaveWordDialog,
   WordDraft,
 } from "./src/LearningScreen";
-import { SpeakingScreen } from "./src/SpeakingScreen";
+import { ConversationScreen } from "./src/ConversationScreen";
 import { EarphoneScreen } from "./src/EarphoneScreen";
 import { HomeScreen, ToolsScreen, Destination } from "./src/HomeScreen";
 import { useMediaInput } from "./src/useMediaInput";
@@ -221,6 +221,8 @@ function LanguageCover({ compact = false }: { compact?: boolean }) {
   );
 }
 function Application() {
+  const chatScroll =
+    useRef<React.ElementRef<typeof KeyboardAwareScrollView>>(null);
   const a = useTranslator();
   const learning = useLearning(a.session?.user.id, a.setMessage);
   const [wordDraft, setWordDraft] = useState<WordDraft | null>(null);
@@ -505,6 +507,7 @@ function Application() {
       ) : (
         <>
           <KeyboardAwareScrollView
+            ref={chatScroll}
             bottomOffset={28}
             extraKeyboardSpace={24}
             keyboardShouldPersistTaps="handled"
@@ -688,23 +691,21 @@ function Application() {
                   })
                 }
               />
-            ) : a.tab === "Speak" ? (
-              <SpeakingScreen
-                key={a.session!.user.id}
+            ) : a.tab === "Speak" || a.tab === "Assistant" ? (
+              <ConversationScreen
+                onAdvance={() =>
+                  requestAnimationFrame(() =>
+                    chatScroll.current?.scrollToEnd({ animated: true }),
+                  )
+                }
+                key={`${a.session!.user.id}-${a.tab}`}
+                mode={a.tab === "Speak" ? "speaking" : "assistant"}
                 userId={a.session!.user.id}
                 source={a.source}
                 target={a.target}
                 onPick={pickLanguage}
                 onBusy={setFeatureBusy}
                 report={a.setMessage}
-                onSave={(source, target, sourceLanguage) =>
-                  setWordDraft({
-                    source,
-                    target,
-                    sourceLanguage,
-                    targetLanguage: a.target,
-                  })
-                }
               />
             ) : a.tab === "Earphones" ? (
               <EarphoneScreen
@@ -1477,6 +1478,7 @@ function Application() {
                   { name: "Translate", icon: "language-outline" },
                   { name: "Learn", icon: "book-outline" },
                   { name: "Speak", icon: "mic-outline" },
+                  { name: "Assistant", icon: "sparkles-outline" },
                   { name: "Tools", icon: "grid-outline" },
                 ] as const
               ).map((item) => (

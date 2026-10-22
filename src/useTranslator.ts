@@ -18,6 +18,7 @@ export function useTranslator() {
     | "Account"
     | "Learn"
     | "Speak"
+    | "Assistant"
     | "Tools"
     | "Earphones"
   >("Translate");
