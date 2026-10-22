@@ -12,9 +12,15 @@ export function useTranslator() {
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [tab, setTab] = useState<"Translate" | "History" | "Account">(
-    "Translate",
-  );
+  const [tab, setTab] = useState<
+    | "Translate"
+    | "History"
+    | "Account"
+    | "Learn"
+    | "Speak"
+    | "Tools"
+    | "Earphones"
+  >("Translate");
   const [source, setSource] = useState<Language>("en");
   const [target, setTarget] = useState<Language>("es");
   const [text, setText] = useState("");

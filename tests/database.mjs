@@ -27,9 +27,15 @@ try {
   await database.exec(
     await readFile(new URL("./languages.sql", import.meta.url), "utf8"),
   );
+  await database.exec(
+    await readFile(new URL("./learning.sql", import.meta.url), "utf8"),
+  );
   console.log(
     "PASS: migration, account isolation, owner deletion, denied client writes/RPC, and 30-request limit on embedded PostgreSQL.",
   );
+} catch (error) {
+  console.error(error.message);
+  process.exitCode = 1;
 } finally {
   await database.close();
 }

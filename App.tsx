@@ -44,6 +44,15 @@ import {
 import { Colors, ThemePreference, ThemeProvider, useTheme } from "./src/theme";
 import { useTranslator } from "./src/useTranslator";
 import { useVoice } from "./src/useVoice";
+import { useLearning } from "./src/useLearning";
+import {
+  LearningScreen,
+  SaveWordDialog,
+  WordDraft,
+} from "./src/LearningScreen";
+import { SpeakingScreen } from "./src/SpeakingScreen";
+import { EarphoneScreen } from "./src/EarphoneScreen";
+import { HomeScreen, ToolsScreen, Destination } from "./src/HomeScreen";
 import { useMediaInput } from "./src/useMediaInput";
 import { MediaWorkspace } from "./src/MediaWorkspace";
 import { InputKind } from "./src/mediaFiles";
@@ -213,6 +222,15 @@ function LanguageCover({ compact = false }: { compact?: boolean }) {
 }
 function Application() {
   const a = useTranslator();
+  const learning = useLearning(a.session?.user.id, a.setMessage);
+  const [wordDraft, setWordDraft] = useState<WordDraft | null>(null);
+  const [featureBusy, setFeatureBusy] = useState(false);
+  const [toolsOverview, setToolsOverview] = useState(true);
+  useEffect(() => {
+    setWordDraft(null);
+    setFeatureBusy(false);
+    if (a.session?.user.id) void a.loadHistory(true);
+  }, [a.session?.user.id]);
   const { colors: c, dark, preference, setPreference } = useTheme();
   const s = useMemo(() => styles(c), [c]);
   const voice = useVoice(a.setMessage);
@@ -228,7 +246,8 @@ function Application() {
     voice.recording ||
     voice.working ||
     media.working ||
-    media.recording;
+    media.recording ||
+    featureBusy;
   const mediaMode =
     inputMode === "document" ||
     inputMode === "recording" ||
@@ -250,7 +269,7 @@ function Application() {
   useEffect(() => {
     void Speech.stop();
     setSpeaking(false);
-  }, [a.result, a.target]);
+  }, [a.result, a.target, a.tab]);
   useEffect(() => {
     voice.discard();
     media.clear();
@@ -375,7 +394,63 @@ function Application() {
       );
     else change();
   }
-  const version = Constants.expoConfig?.version ?? "1.4.0";
+  function saveWord(item?: Translation) {
+    const sourceLanguage = item?.source_language ?? a.source;
+    const targetLanguage = item?.target_language ?? a.target;
+    if (!isLanguage(sourceLanguage) || !isLanguage(targetLanguage)) {
+      a.setMessage("Choose a supported language pair to save a learning word.");
+      return;
+    }
+    setWordDraft({
+      source: item?.original_text ?? a.text,
+      target: item?.translated_text ?? a.result,
+      sourceLanguage,
+      targetLanguage,
+    });
+  }
+  function openTool(kind: InputKind) {
+    if (locked) return;
+    const open = () => {
+      media.clear();
+      a.setResult("");
+      a.setMessage("");
+      setInputMode(kind);
+      setToolsOverview(false);
+      a.setTab("Tools");
+      Keyboard.dismiss();
+    };
+    if (media.file || media.draft)
+      Alert.alert(
+        "Switch translation tool?",
+        "The selected file and unsubmitted text will be cleared.",
+        [
+          { text: "Keep working", style: "cancel" },
+          { text: "Switch tool", onPress: open },
+        ],
+      );
+    else open();
+  }
+  function openDestination(destination: Destination) {
+    if (locked) return;
+    Keyboard.dismiss();
+    a.setMessage("");
+    if (destination === "Tools") setToolsOverview(true);
+    a.setTab(destination);
+    if (destination === "Learn") void learning.load();
+  }
+  function pickLanguage(side: "source" | "target") {
+    Keyboard.dismiss();
+    setLanguageQuery("");
+    setPicker(side);
+  }
+  function swapLanguages() {
+    a.setSource(a.target);
+    a.setTarget(a.source);
+    a.setResult("");
+    voice.discard();
+    media.clear();
+  }
+  const version = Constants.expoConfig?.version ?? "1.5.0";
   return (
     <SafeAreaView style={s.safe} edges={["top", "left", "right", "bottom"]}>
       <StatusBar style={dark ? "light" : "dark"} />
@@ -390,11 +465,29 @@ function Application() {
             <Text style={s.brandCaption}>Translate your world.</Text>
           </View>
         </View>
-        <IconButton
-          label={dark ? "Switch to light mode" : "Switch to dark mode"}
-          icon={dark ? "sunny-outline" : "moon-outline"}
-          onPress={() => setPreference(dark ? "light" : "dark")}
-        />
+        <View style={{ flexDirection: "row", gap: 6 }}>
+          <IconButton
+            label={dark ? "Switch to light mode" : "Switch to dark mode"}
+            icon={dark ? "sunny-outline" : "moon-outline"}
+            onPress={() => setPreference(dark ? "light" : "dark")}
+          />
+          {!a.showAuth && (
+            <IconButton
+              label={
+                a.tab === "Account" ? "Back to translation" : "Your account"
+              }
+              icon={
+                a.tab === "Account"
+                  ? "arrow-back-outline"
+                  : "person-circle-outline"
+              }
+              disabled={locked}
+              onPress={() =>
+                a.setTab(a.tab === "Account" ? "Translate" : "Account")
+              }
+            />
+          )}
+        </View>
       </View>
       {!configured ? (
         <View style={s.center}>
@@ -547,432 +640,555 @@ function Application() {
                 </Text>
               </>
             ) : a.tab === "Translate" ? (
-              <>
-                {!keyboard && <LanguageCover compact={inputMode === "voice"} />}
-                <View style={s.segment}>
-                  {(
-                    [
-                      { mode: "text", label: "Text", icon: "text-outline" },
-                      { mode: "voice", label: "Live", icon: "mic-outline" },
-                      {
-                        mode: "document",
-                        label: "Docs",
-                        icon: "document-text-outline",
-                      },
-                      {
-                        mode: "recording",
-                        label: "Audio",
-                        icon: "musical-notes-outline",
-                      },
-                      { mode: "call", label: "Calls", icon: "call-outline" },
-                    ] as const
-                  ).map((tool) => (
-                    <Pressable
-                      key={tool.mode}
-                      accessibilityRole="tab"
-                      accessibilityLabel={`${tool.label} translation`}
-                      accessibilityState={{ selected: inputMode === tool.mode }}
-                      disabled={locked}
-                      onPress={() => changeTool(tool.mode)}
-                      style={[
-                        s.segmentItem,
-                        inputMode === tool.mode && s.segmentSelected,
-                      ]}
-                    >
-                      <Icon
-                        name={tool.icon}
-                        size={21}
-                        color={inputMode === tool.mode ? c.accentText : c.muted}
-                      />
-                      <Text
-                        style={[
-                          s.segmentLabel,
-                          {
-                            color:
-                              inputMode === tool.mode ? c.accentText : c.muted,
-                          },
-                        ]}
-                      >
-                        {tool.label}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-                <View style={s.languageRow}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Source language: ${languages[a.source].name}`}
+              <HomeScreen
+                source={a.source}
+                target={a.target}
+                text={a.text}
+                result={a.result}
+                history={a.history}
+                busy={locked}
+                keyboard={keyboard}
+                onText={(value) => {
+                  a.setText(value);
+                  a.setResult("");
+                  a.setMessage("");
+                }}
+                onPick={pickLanguage}
+                onSwap={swapLanguages}
+                onTranslate={() => {
+                  Keyboard.dismiss();
+                  void a.translate();
+                }}
+                onListen={() => void speak()}
+                onCopy={() =>
+                  void Clipboard.setStringAsync(a.result).then(
+                    () => a.setMessage("Translation copied."),
+                    () => a.setMessage("Could not copy the translation."),
+                  )
+                }
+                onSave={saveWord}
+                onHistory={() => {
+                  a.setTab("History");
+                  void a.loadHistory(true);
+                }}
+                onDestination={openDestination}
+                onTool={openTool}
+                onOpen={openHistory}
+              />
+            ) : a.tab === "Learn" ? (
+              <LearningScreen
+                learning={learning}
+                report={a.setMessage}
+                onAdd={() =>
+                  setWordDraft({
+                    source: "",
+                    target: "",
+                    sourceLanguage: a.source,
+                    targetLanguage: a.target,
+                  })
+                }
+              />
+            ) : a.tab === "Speak" ? (
+              <SpeakingScreen
+                key={a.session!.user.id}
+                userId={a.session!.user.id}
+                source={a.source}
+                target={a.target}
+                onPick={pickLanguage}
+                onBusy={setFeatureBusy}
+                report={a.setMessage}
+                onSave={(source, target, sourceLanguage) =>
+                  setWordDraft({
+                    source,
+                    target,
+                    sourceLanguage,
+                    targetLanguage: a.target,
+                  })
+                }
+              />
+            ) : a.tab === "Earphones" ? (
+              <EarphoneScreen
+                key={a.session!.user.id}
+                source={a.source}
+                target={a.target}
+                onPick={pickLanguage}
+                onSwap={swapLanguages}
+                onBusy={setFeatureBusy}
+                report={a.setMessage}
+                onSave={(source, target) =>
+                  setWordDraft({
+                    source,
+                    target,
+                    sourceLanguage: a.source,
+                    targetLanguage: a.target,
+                  })
+                }
+              />
+            ) : a.tab === "Tools" ? (
+              toolsOverview ? (
+                <ToolsScreen
+                  onTool={openTool}
+                  onDestination={openDestination}
+                />
+              ) : (
+                <>
+                  <Action
+                    label="All tools"
+                    quiet
+                    small
+                    icon="arrow-back-outline"
                     disabled={locked}
-                    style={s.languageButton}
-                    onPress={() => {
-                      Keyboard.dismiss();
-                      setLanguageQuery("");
-                      setPicker("source");
-                    }}
-                  >
-                    <Text style={s.smallLabel}>
-                      {inputMode === "voice" ? "I’m speaking" : "From"}
-                    </Text>
-                    <View style={s.inline}>
-                      <Text style={s.languageText}>
-                        {languages[a.source].name}
-                      </Text>
-                      <Icon name="chevron-down" size={16} />
-                    </View>
-                  </Pressable>
-                  <IconButton
-                    label="Swap languages"
-                    icon="swap-horizontal"
-                    disabled={locked}
-                    onPress={() => {
-                      a.setSource(a.target);
-                      a.setTarget(a.source);
-                      if (a.result) a.setText(a.result);
-                      a.setResult("");
-                      voice.discard();
-                      media.clear();
-                      a.setMessage("");
-                    }}
+                    onPress={() => setToolsOverview(true)}
                   />
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Target language: ${languages[a.target].name}`}
-                    disabled={locked}
-                    style={s.languageButton}
-                    onPress={() => {
-                      Keyboard.dismiss();
-                      setLanguageQuery("");
-                      setPicker("target");
-                    }}
-                  >
-                    <Text style={s.smallLabel}>Translate to</Text>
-                    <View style={s.inline}>
-                      <Text style={s.languageText}>
-                        {languages[a.target].name}
-                      </Text>
-                      <Icon name="chevron-down" size={16} />
-                    </View>
-                  </Pressable>
-                </View>
-                {mediaMode ? (
-                  <MediaWorkspace
-                    media={media}
-                    kind={inputMode as "document" | "recording" | "call"}
-                    source={a.source}
-                    locked={locked}
-                    onEdit={() => {
-                      a.setResult("");
-                      a.setMessage("");
-                    }}
-                  />
-                ) : inputMode === "text" ? (
-                  <View style={s.composer}>
-                    <View style={s.spaceBetween}>
-                      <Text style={s.label}>{languages[a.source].name}</Text>
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="Clear source text"
-                        disabled={locked || !a.text}
-                        onPress={() => {
-                          a.setText("");
-                          a.setResult("");
-                          a.setMessage("");
-                        }}
-                        style={{ padding: 7 }}
-                      >
-                        <Icon
-                          name="close-circle-outline"
-                          color={c.muted}
-                          size={21}
-                        />
-                      </Pressable>
-                    </View>
-                    <TextInput
-                      accessibilityLabel="Text to translate"
-                      multiline
-                      textAlignVertical="top"
-                      editable={!locked}
-                      style={[
-                        s.editor,
+                  <View style={s.segment}>
+                    {(
+                      [
+                        { mode: "text", label: "Text", icon: "text-outline" },
+                        { mode: "voice", label: "Live", icon: "mic-outline" },
                         {
-                          textAlign: isRtlLanguage(a.source) ? "right" : "left",
+                          mode: "document",
+                          label: "Docs",
+                          icon: "document-text-outline",
                         },
-                      ]}
-                      placeholder="What would you like to say?"
-                      placeholderTextColor={c.muted}
-                      value={a.text}
-                      onChangeText={(value) => {
-                        a.setText(value);
-                        a.setResult("");
-                        a.setMessage("");
-                      }}
-                    />
-                    <View style={s.spaceBetween}>
-                      <Text
+                        {
+                          mode: "recording",
+                          label: "Audio",
+                          icon: "musical-notes-outline",
+                        },
+                        { mode: "call", label: "Calls", icon: "call-outline" },
+                      ] as const
+                    ).map((tool) => (
+                      <Pressable
+                        key={tool.mode}
+                        accessibilityRole="tab"
+                        accessibilityLabel={`${tool.label} translation`}
+                        accessibilityState={{
+                          selected: inputMode === tool.mode,
+                        }}
+                        disabled={locked}
+                        onPress={() => changeTool(tool.mode)}
                         style={[
-                          s.caption,
-                          Array.from(a.text).length > 5000 && {
-                            color: c.error,
-                          },
+                          s.segmentItem,
+                          inputMode === tool.mode && s.segmentSelected,
                         ]}
                       >
-                        {Array.from(a.text).length.toLocaleString()} / 5,000
-                      </Text>
-                      <View style={s.inline}>
                         <Icon
-                          name="lock-closed-outline"
-                          color={c.muted}
-                          size={12}
-                        />
-                        <Text style={s.caption}>Private history</Text>
-                      </View>
-                    </View>
-                  </View>
-                ) : (
-                  <View style={s.voicePanel}>
-                    <View style={s.voiceStatus}>
-                      <View style={s.inline}>
-                        <View
-                          style={[
-                            s.dot,
-                            {
-                              backgroundColor: voice.recording
-                                ? c.teal
-                                : c.accent,
-                            },
-                          ]}
+                          name={tool.icon}
+                          size={21}
+                          color={
+                            inputMode === tool.mode ? c.accentText : c.muted
+                          }
                         />
                         <Text
                           style={[
-                            s.label,
-                            { color: voice.recording ? c.teal : c.accent },
+                            s.segmentLabel,
+                            {
+                              color:
+                                inputMode === tool.mode
+                                  ? c.accentText
+                                  : c.muted,
+                            },
                           ]}
                         >
-                          {voice.working
-                            ? "Finishing…"
-                            : voice.recording
-                              ? "Listening live"
-                              : voice.transcript
-                                ? "Ready to review"
-                                : "Speak in " + languages[a.source].name}
+                          {tool.label}
                         </Text>
-                      </View>
-                      <Text style={s.caption}>
-                        {voice.recording
-                          ? `0:${String(voice.seconds).padStart(2, "0")} / 1:00`
-                          : "Live transcript"}
+                      </Pressable>
+                    ))}
+                  </View>
+                  <View style={s.languageRow}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Source language: ${languages[a.source].name}`}
+                      disabled={locked}
+                      style={s.languageButton}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        setLanguageQuery("");
+                        setPicker("source");
+                      }}
+                    >
+                      <Text style={s.smallLabel}>
+                        {inputMode === "voice" ? "I’m speaking" : "From"}
                       </Text>
-                    </View>
-                    <TextInput
-                      accessibilityLabel="Voice transcript. Review and edit before translating"
-                      accessibilityHint="Words appear while you speak. Stop listening to edit them."
-                      multiline
-                      textAlignVertical="top"
-                      editable={!locked}
-                      placeholder={
-                        voice.recording
-                          ? "Your words will appear here as you speak…"
-                          : "Tap the microphone and start speaking."
-                      }
-                      placeholderTextColor={c.muted}
-                      style={[
-                        s.editor,
-                        s.liveEditor,
-                        {
-                          textAlign: isRtlLanguage(a.source) ? "right" : "left",
-                        },
-                      ]}
-                      value={voice.transcript}
-                      onChangeText={(value) => {
-                        voice.editTranscript(value);
+                      <View style={s.inline}>
+                        <Text style={s.languageText}>
+                          {languages[a.source].name}
+                        </Text>
+                        <Icon name="chevron-down" size={16} />
+                      </View>
+                    </Pressable>
+                    <IconButton
+                      label="Swap languages"
+                      icon="swap-horizontal"
+                      disabled={locked}
+                      onPress={() => {
+                        a.setSource(a.target);
+                        a.setTarget(a.source);
+                        if (a.result) a.setText(a.result);
+                        a.setResult("");
+                        voice.discard();
+                        media.clear();
+                        a.setMessage("");
+                      }}
+                    />
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Target language: ${languages[a.target].name}`}
+                      disabled={locked}
+                      style={s.languageButton}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        setLanguageQuery("");
+                        setPicker("target");
+                      }}
+                    >
+                      <Text style={s.smallLabel}>Translate to</Text>
+                      <View style={s.inline}>
+                        <Text style={s.languageText}>
+                          {languages[a.target].name}
+                        </Text>
+                        <Icon name="chevron-down" size={16} />
+                      </View>
+                    </Pressable>
+                  </View>
+                  {mediaMode ? (
+                    <MediaWorkspace
+                      media={media}
+                      kind={inputMode as "document" | "recording" | "call"}
+                      source={a.source}
+                      locked={locked}
+                      onEdit={() => {
                         a.setResult("");
                         a.setMessage("");
                       }}
                     />
-                    <View style={s.voiceFooter}>
-                      <View style={{ flex: 1, gap: 4 }}>
-                        <Text style={s.panelTitle}>
-                          {voice.recording
-                            ? "Speak naturally"
-                            : voice.transcript
-                              ? "Did we get that right?"
-                              : "Speak. See. Review."}
-                        </Text>
-                        <Text style={s.caption}>
-                          {voice.recording
-                            ? "Tap stop to review your words."
-                            : voice.transcript
-                              ? "Edit any words above before submitting."
-                              : "Up to 60 seconds. You’re in control."}
-                        </Text>
+                  ) : inputMode === "text" ? (
+                    <View style={s.composer}>
+                      <View style={s.spaceBetween}>
+                        <Text style={s.label}>{languages[a.source].name}</Text>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel="Clear source text"
+                          disabled={locked || !a.text}
+                          onPress={() => {
+                            a.setText("");
+                            a.setResult("");
+                            a.setMessage("");
+                          }}
+                          style={{ padding: 7 }}
+                        >
+                          <Icon
+                            name="close-circle-outline"
+                            color={c.muted}
+                            size={21}
+                          />
+                        </Pressable>
                       </View>
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={
-                          voice.recording
-                            ? "Stop listening and review transcript"
-                            : voice.transcript
-                              ? "Record again and replace transcript"
-                              : "Start live transcription"
-                        }
-                        disabled={a.busy || voice.working}
-                        onPress={() => {
-                          if (voice.recording) voice.stop();
-                          else {
-                            const begin = () => {
-                              a.setResult("");
-                              void Speech.stop().then(() => {
-                                setSpeaking(false);
-                                return voice.start(languages[a.source].locale);
-                              });
-                            };
-                            if (voice.transcript.trim())
-                              Alert.alert(
-                                "Replace this transcript?",
-                                "Starting again replaces the words above.",
-                                [
-                                  { text: "Keep text", style: "cancel" },
-                                  { text: "Record again", onPress: begin },
-                                ],
-                              );
-                            else begin();
-                          }
-                        }}
+                      <TextInput
+                        accessibilityLabel="Text to translate"
+                        multiline
+                        textAlignVertical="top"
+                        editable={!locked}
                         style={[
-                          s.recordButton,
-                          voice.recording && { backgroundColor: c.error },
+                          s.editor,
+                          {
+                            textAlign: isRtlLanguage(a.source)
+                              ? "right"
+                              : "left",
+                          },
                         ]}
-                      >
-                        <Icon
-                          name={voice.recording ? "stop" : "mic"}
-                          size={27}
-                          color={voice.recording ? "#FFFFFF" : c.accentText}
-                        />
-                      </Pressable>
-                    </View>
-                    {!voice.recording && !!voice.transcript && (
+                        placeholder="What would you like to say?"
+                        placeholderTextColor={c.muted}
+                        value={a.text}
+                        onChangeText={(value) => {
+                          a.setText(value);
+                          a.setResult("");
+                          a.setMessage("");
+                        }}
+                      />
                       <View style={s.spaceBetween}>
                         <Text
                           style={[
                             s.caption,
-                            Array.from(voice.transcript).length > 5000 && {
+                            Array.from(a.text).length > 5000 && {
                               color: c.error,
                             },
                           ]}
                         >
-                          {Array.from(voice.transcript).length.toLocaleString()}{" "}
-                          / 5,000
+                          {Array.from(a.text).length.toLocaleString()} / 5,000
                         </Text>
+                        <View style={s.inline}>
+                          <Icon
+                            name="lock-closed-outline"
+                            color={c.muted}
+                            size={12}
+                          />
+                          <Text style={s.caption}>Private history</Text>
+                        </View>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={s.voicePanel}>
+                      <View style={s.voiceStatus}>
+                        <View style={s.inline}>
+                          <View
+                            style={[
+                              s.dot,
+                              {
+                                backgroundColor: voice.recording
+                                  ? c.teal
+                                  : c.accent,
+                              },
+                            ]}
+                          />
+                          <Text
+                            style={[
+                              s.label,
+                              { color: voice.recording ? c.teal : c.accent },
+                            ]}
+                          >
+                            {voice.working
+                              ? "Finishing…"
+                              : voice.recording
+                                ? "Listening live"
+                                : voice.transcript
+                                  ? "Ready to review"
+                                  : "Speak in " + languages[a.source].name}
+                          </Text>
+                        </View>
+                        <Text style={s.caption}>
+                          {voice.recording
+                            ? `0:${String(voice.seconds).padStart(2, "0")} / 1:00`
+                            : "Live transcript"}
+                        </Text>
+                      </View>
+                      <TextInput
+                        accessibilityLabel="Voice transcript. Review and edit before translating"
+                        accessibilityHint="Words appear while you speak. Stop listening to edit them."
+                        multiline
+                        textAlignVertical="top"
+                        editable={!locked}
+                        placeholder={
+                          voice.recording
+                            ? "Your words will appear here as you speak…"
+                            : "Tap the microphone and start speaking."
+                        }
+                        placeholderTextColor={c.muted}
+                        style={[
+                          s.editor,
+                          s.liveEditor,
+                          {
+                            textAlign: isRtlLanguage(a.source)
+                              ? "right"
+                              : "left",
+                          },
+                        ]}
+                        value={voice.transcript}
+                        onChangeText={(value) => {
+                          voice.editTranscript(value);
+                          a.setResult("");
+                          a.setMessage("");
+                        }}
+                      />
+                      <View style={s.voiceFooter}>
+                        <View style={{ flex: 1, gap: 4 }}>
+                          <Text style={s.panelTitle}>
+                            {voice.recording
+                              ? "Speak naturally"
+                              : voice.transcript
+                                ? "Did we get that right?"
+                                : "Speak. See. Review."}
+                          </Text>
+                          <Text style={s.caption}>
+                            {voice.recording
+                              ? "Tap stop to review your words."
+                              : voice.transcript
+                                ? "Edit any words above before submitting."
+                                : "Up to 60 seconds. You’re in control."}
+                          </Text>
+                        </View>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={
+                            voice.recording
+                              ? "Stop listening and review transcript"
+                              : voice.transcript
+                                ? "Record again and replace transcript"
+                                : "Start live transcription"
+                          }
+                          disabled={a.busy || voice.working}
+                          onPress={() => {
+                            if (voice.recording) voice.stop();
+                            else {
+                              const begin = () => {
+                                a.setResult("");
+                                void Speech.stop().then(() => {
+                                  setSpeaking(false);
+                                  return voice.start(
+                                    languages[a.source].locale,
+                                  );
+                                });
+                              };
+                              if (voice.transcript.trim())
+                                Alert.alert(
+                                  "Replace this transcript?",
+                                  "Starting again replaces the words above.",
+                                  [
+                                    { text: "Keep text", style: "cancel" },
+                                    { text: "Record again", onPress: begin },
+                                  ],
+                                );
+                              else begin();
+                            }
+                          }}
+                          style={[
+                            s.recordButton,
+                            voice.recording && { backgroundColor: c.error },
+                          ]}
+                        >
+                          <Icon
+                            name={voice.recording ? "stop" : "mic"}
+                            size={27}
+                            color={voice.recording ? "#FFFFFF" : c.accentText}
+                          />
+                        </Pressable>
+                      </View>
+                      {!voice.recording && !!voice.transcript && (
+                        <View style={s.spaceBetween}>
+                          <Text
+                            style={[
+                              s.caption,
+                              Array.from(voice.transcript).length > 5000 && {
+                                color: c.error,
+                              },
+                            ]}
+                          >
+                            {Array.from(
+                              voice.transcript,
+                            ).length.toLocaleString()}{" "}
+                            / 5,000
+                          </Text>
+                          <Action
+                            label="Clear transcript"
+                            small
+                            quiet
+                            disabled={locked}
+                            onPress={() => {
+                              voice.discard();
+                              a.setResult("");
+                            }}
+                          />
+                        </View>
+                      )}
+                    </View>
+                  )}
+                  <Action
+                    label={
+                      a.busy
+                        ? "Translating…"
+                        : inputMode !== "text"
+                          ? "Confirm & translate"
+                          : "Translate text"
+                    }
+                    icon={a.busy ? "hourglass-outline" : "arrow-forward"}
+                    disabled={
+                      locked ||
+                      !sourceDraft.trim() ||
+                      Array.from(sourceDraft).length > 5000
+                    }
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      if (inputMode === "voice") void submitTranscript();
+                      else if (mediaMode)
+                        void a.translate(media.draft, {
+                          inputKind: inputMode,
+                          sourceName: media.file?.name,
+                        });
+                      else void a.translate();
+                    }}
+                  />
+                  {a.result !== "" && (
+                    <View style={s.resultPanel}>
+                      <View style={s.spaceBetween}>
+                        <View style={s.inline}>
+                          <View style={s.dot} />
+                          <Text style={[s.label, { color: c.teal }]}>
+                            {languages[a.target].name}
+                          </Text>
+                        </View>
+                        <Text style={s.caption}>Translation</Text>
+                      </View>
+                      <Text
+                        selectable
+                        style={[
+                          s.translated,
+                          {
+                            textAlign: isRtlLanguage(a.target)
+                              ? "right"
+                              : "left",
+                          },
+                        ]}
+                      >
+                        {a.result}
+                      </Text>
+                      <View style={[s.resultActions, { flexWrap: "wrap" }]}>
                         <Action
-                          label="Clear transcript"
+                          label="Learn phrase"
                           small
                           quiet
-                          disabled={locked}
+                          icon="bookmark-outline"
+                          onPress={() => saveWord()}
+                        />
+                        <Action
+                          label="Export TXT"
+                          small
+                          quiet
+                          icon="share-outline"
+                          onPress={() => void exportTranslation()}
+                        />
+                        <Action
+                          label={speaking ? "Stop reading" : "Listen"}
+                          small
+                          quiet
+                          icon={
+                            speaking
+                              ? "stop-circle-outline"
+                              : "volume-high-outline"
+                          }
+                          onPress={() => void speak()}
+                        />
+                        <Action
+                          label="Copy"
+                          small
+                          quiet
+                          icon="copy-outline"
                           onPress={() => {
-                            voice.discard();
-                            a.setResult("");
+                            void Clipboard.setStringAsync(a.result).then(
+                              () => a.setMessage("Translation copied."),
+                              () =>
+                                a.setMessage(
+                                  "Could not copy. Select the text to copy it.",
+                                ),
+                            );
                           }}
                         />
                       </View>
-                    )}
-                  </View>
-                )}
-                <Action
-                  label={
-                    a.busy
-                      ? "Translating…"
-                      : inputMode !== "text"
-                        ? "Confirm & translate"
-                        : "Translate text"
-                  }
-                  icon={a.busy ? "hourglass-outline" : "arrow-forward"}
-                  disabled={
-                    locked ||
-                    !sourceDraft.trim() ||
-                    Array.from(sourceDraft).length > 5000
-                  }
-                  onPress={() => {
-                    Keyboard.dismiss();
-                    if (inputMode === "voice") void submitTranscript();
-                    else if (mediaMode)
-                      void a.translate(media.draft, {
-                        inputKind: inputMode,
-                        sourceName: media.file?.name,
-                      });
-                    else void a.translate();
-                  }}
-                />
-                {a.result !== "" && (
-                  <View style={s.resultPanel}>
-                    <View style={s.spaceBetween}>
-                      <View style={s.inline}>
-                        <View style={s.dot} />
-                        <Text style={[s.label, { color: c.teal }]}>
-                          {languages[a.target].name}
-                        </Text>
-                      </View>
-                      <Text style={s.caption}>Translation</Text>
                     </View>
-                    <Text
-                      selectable
-                      style={[
-                        s.translated,
-                        {
-                          textAlign: isRtlLanguage(a.target) ? "right" : "left",
-                        },
-                      ]}
-                    >
-                      {a.result}
+                  )}
+                  {inputMode !== "text" && (
+                    <Text style={s.reviewNote}>
+                      {mediaMode
+                        ? "Review the extracted text, make any corrections, then tap Confirm & translate."
+                        : "Nothing is translated until you confirm. Stop listening, check the words, then tap Confirm & translate."}
                     </Text>
-                    <View style={[s.resultActions, { flexWrap: "wrap" }]}>
-                      <Action
-                        label="Export TXT"
-                        small
-                        quiet
-                        icon="share-outline"
-                        onPress={() => void exportTranslation()}
-                      />
-                      <Action
-                        label={speaking ? "Stop reading" : "Listen"}
-                        small
-                        quiet
-                        icon={
-                          speaking
-                            ? "stop-circle-outline"
-                            : "volume-high-outline"
-                        }
-                        onPress={() => void speak()}
-                      />
-                      <Action
-                        label="Copy"
-                        small
-                        quiet
-                        icon="copy-outline"
-                        onPress={() => {
-                          void Clipboard.setStringAsync(a.result).then(
-                            () => a.setMessage("Translation copied."),
-                            () =>
-                              a.setMessage(
-                                "Could not copy. Select the text to copy it.",
-                              ),
-                          );
-                        }}
-                      />
-                    </View>
-                  </View>
-                )}
-                {inputMode !== "text" && (
-                  <Text style={s.reviewNote}>
-                    {mediaMode
-                      ? "Review the extracted text, make any corrections, then tap Confirm & translate."
-                      : "Nothing is translated until you confirm. Stop listening, check the words, then tap Confirm & translate."}
+                  )}
+                  <Text style={s.footnote}>
+                    AI translations can make mistakes. Submitted text is
+                    processed by Gemini. Live speech uses your phone’s
+                    recognition service.
                   </Text>
-                )}
-                <Text style={s.footnote}>
-                  AI translations can make mistakes. Submitted text is processed
-                  by Gemini. Live speech uses your phone’s recognition service.
-                </Text>
-              </>
+                </>
+              )
             ) : a.tab === "History" ? (
               <>
                 <View style={s.sectionHeading}>
@@ -1044,7 +1260,11 @@ function Application() {
                           ? "Call recording"
                           : item.input_kind === "document"
                             ? "Document"
-                            : "Audio"}{" "}
+                            : item.input_kind === "recording"
+                              ? "Audio"
+                              : item.input_kind === "voice"
+                                ? "Voice"
+                                : "Text"}{" "}
                         · {item.source_name}
                       </Text>
                     )}
@@ -1255,8 +1475,9 @@ function Application() {
               {(
                 [
                   { name: "Translate", icon: "language-outline" },
-                  { name: "History", icon: "time-outline" },
-                  { name: "Account", icon: "person-circle-outline" },
+                  { name: "Learn", icon: "book-outline" },
+                  { name: "Speak", icon: "mic-outline" },
+                  { name: "Tools", icon: "grid-outline" },
                 ] as const
               ).map((item) => (
                 <Pressable
@@ -1267,7 +1488,8 @@ function Application() {
                   onPress={() => {
                     a.setTab(item.name);
                     a.setMessage("");
-                    if (item.name === "History") void a.loadHistory(true);
+                    if (item.name === "Learn") void learning.load();
+                    if (item.name === "Tools") setToolsOverview(true);
                   }}
                   style={s.navItem}
                 >
@@ -1301,6 +1523,21 @@ function Application() {
           )}
         </>
       )}
+      <SaveWordDialog
+        draft={wordDraft}
+        busy={learning.busy}
+        onClose={() => setWordDraft(null)}
+        onSave={async (draft) => {
+          const saved = await learning.save(
+            draft.source,
+            draft.target,
+            draft.sourceLanguage,
+            draft.targetLanguage,
+          );
+          if (saved) void learning.load();
+          return saved;
+        }}
+      />
       <Modal
         visible={picker !== null}
         transparent
@@ -1728,13 +1965,13 @@ const styles = (c: Colors) =>
     },
     navigation: {
       flexDirection: "row",
-      backgroundColor: c.navBg,
-      borderTopWidth: 0,
+      backgroundColor: c.bg,
+      borderTopWidth: 1,
       borderColor: c.line,
       paddingVertical: 5,
-      marginHorizontal: 18,
-      marginBottom: 8,
-      borderRadius: 26,
+      marginHorizontal: 0,
+      marginBottom: 0,
+      borderRadius: 0,
     },
     navItem: {
       flex: 1,
@@ -1743,7 +1980,7 @@ const styles = (c: Colors) =>
       minHeight: 62,
       justifyContent: "center",
     },
-    navIcon: { paddingVertical: 6, paddingHorizontal: 23, borderRadius: 17 },
+    navIcon: { paddingVertical: 6, paddingHorizontal: 16, borderRadius: 17 },
     notice: {
       backgroundColor: c.tint,
       borderRadius: 16,

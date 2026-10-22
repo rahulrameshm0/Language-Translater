@@ -2,7 +2,7 @@
 
 ![LingoBridge icon](assets/lingobridge-icon.png)
 
-[Download the latest Android APK](https://github.com/rahulrameshm0/vaylo-downloads/releases/latest)
+Android APKs are distributed from this app’s [Expo builds page](https://expo.dev/accounts/rahulrameshm0-threewords/projects/three-words-translator/builds). Open a completed Android preview build and choose Install / Download.
 
 Android and iOS text and voice translator with 30 languages. Includes light, dark, and system themes, a keyboard-aware translation workspace, and manual APK installation. Expo + TypeScript, Supabase Auth/PostgreSQL, and Gemini 3.5 Flash-Lite on its free API tier. There is no demo login, local database substitute, or fake translation fallback.
 
@@ -79,11 +79,11 @@ The configured hosted project is `mejnwvewnrdkzkagqxdc`; its initial SQL migrati
 
 ## Branding
 
-The app is now named Vaylo. The launcher icon is in `assets/icon.png`; see [BRANDING.md](BRANDING.md) for the design prompt and asset details. Existing Expo project slug, native application IDs, and `threewords://` authentication callbacks are retained for compatibility. Vaylo 1.0.1 (Android version code 2) includes this name and icon. Earlier download links point to older builds and do not update automatically. Install the latest APK over the existing app.
+The app is now named LingoBridge. The launcher icon is in `assets/lingobridge-icon.png`; see [BRANDING.md](BRANDING.md) for the design prompt and asset details. Existing Expo project slug, native application IDs, and `threewords://` authentication callbacks are retained for compatibility. Vaylo 1.0.1 (Android version code 2) includes this name and icon. Earlier download links point to older builds and do not update automatically. Install the latest APK over the existing app.
 
 ## Manual updates and free services
 
-The app does not check for updates or show update/download buttons. Download a newer APK from the public releases page and install it manually over Vaylo. Keep the package ID and signing key unchanged, and increase the Android version code for each release.
+The app does not check for updates or show update/download buttons. Download a newer APK from a completed Expo preview build and install it manually over the existing app. Keep the package ID and signing key unchanged, and increase the Android version code for each release.
 
 Builds remain on Expo’s free tier, which may queue before compiling. Supabase and Gemini remain on their configured free tiers; usage is limited by their quotas. No paid plan or fallback is enabled. The historical app_releases database table is unused by the app.
 
@@ -120,3 +120,15 @@ Files are limited to 8 MB, and extracted/confirmed text to 5,000 Unicode charact
 Deploy migration 202610220002 before updating the translate function. It adds input_kind and source_name while retaining RLS. The same function accepts action=extract with kind, sourceLanguage, mimeType and fileBase64, verifies the user and consumes the shared 30-request/minute limit. It validates decoded size and file headers, rejects blocked/incomplete/empty/overlong extraction, and never inserts history at the extraction step. It uses the existing free-tier Gemini key with no paid fallback. DOCX decompression is restricted to word/document.xml with expansion bounds.
 
 Acceptance testing: native file picker, audio permissions/recording, playback, PDF scans, DOCX tables/paragraphs, TXT encoding, import call recording, interrupted uploads, editing/retry, source labels in history, account isolation and native TXT sharing. Service quotas and device speech availability still apply.
+
+## Learning, speaking and earphones (1.5)
+
+The charcoal home screen includes tool cards, real recent history and a compact composer. Translate, Learn, Speak and Tools are the four main tabs; Account and theme controls are in the header. Existing document, recording and imported call-recording tools remain available.
+
+- Earphones: connect wired/Bluetooth earphones and select them as the phone’s media output. Start a turn, review/edit recognized text, then confirm translation and playback. The app uses the OS-selected route; it does not detect headphones, split left/right channels, capture calls or listen in the background.
+- Learn: save a word/phrase (up to 300 characters per side) from a translation/history or add one manually. Choose 5/10/20 daily words, reveal flashcards, then grade Again/Good/Easy. Private PostgreSQL cards, scheduled due dates and distinct reviewed-card counts persist across sessions. Deleting a card also removes its review records. Device timezone sets the learning day.
+- Speak: select native/practice languages, level and social/work/study/travel scenario. Choose an actual installed device voice, listen to a translated prompt, speak, edit the transcript and check matching words (characters for Chinese/Japanese). Feedback compares recognized text; it is not an acoustic pronunciation assessment or an AI conversation partner. Attempts save privately in PostgreSQL; failed saves can be retried.
+
+Apply `supabase/migrations/202610220003_learning_speaking.sql` for these features. It creates owned cards/settings/reviews/attempts and the owner-checking review RPC. RLS isolates accounts, and clients cannot directly forge review scheduling/progress. This migration was applied to the configured hosted project through its SQL editor. Before using CLI migration pushes there, repair already-applied migration history with authorized database credentials.
+
+Device acceptance: test wired and Bluetooth output, stopping playback/navigation/backgrounding, live recognition and denied permissions, all speaking setup choices, transcript edits and save retry; save a word, restart/sign in, grade it and check the local-day goal; verify a second account cannot see cards or attempts. Installed recognition/TTS support varies by device and language. No new paid service, subscription, multiplayer opponent or generated success statistic is included.

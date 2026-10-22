@@ -1,4 +1,16 @@
-# LingoBridge 1.4 verification
+# LingoBridge 1.5 verification
+
+Version 1.5.0 / native build 7 adds the reference-inspired charcoal interface, earphone turn translation, private vocabulary study and guided speaking practice. The package ID and signing key are retained.
+
+- TypeScript, formatting, backend checks, 37 automated tests and PostgreSQL/PGlite migration tests pass. Expo Doctor passes 20/20. Android and iOS Hermes exports pass.
+- The learning/speaking migration was applied to hosted Supabase. Rolled-back hosted assertions passed for owner reads/writes, cross-account isolation, protected scheduling/progress and anonymous RPC denial.
+- Practice tests cover Unicode, locale-aware matching, Chinese/Japanese characters, scenario catalog and phrase limits. Recognition feedback compares text, not acoustic pronunciation.
+- Earphone playback uses OS-selected media output with real installed voices; phone recognition produces the editable transcript. Hardware routing, speech delivery, permissions, background handling and keyboard behavior require Android/iOS physical-device acceptance. No native device/emulator test was performed here.
+- Visual checks use the actual React Native components in an isolated web harness. Preview auth/data fixtures stay outside the repo and APK.
+- No new paid provider or update mechanism was added. Free plan quotas still apply. Existing custom SMTP and iOS distribution requirements remain.
+- Known dependency audit: 26 advisories (21 high, 5 moderate); no incompatible forced framework upgrades were applied.
+
+## Previous 1.4 verification
 
 Version 1.4.0 / native build 6 adds document/audio/call-recording import, voice clip recording, reviewed extraction, TXT export and new translation-related branding. Old package identifiers and signing key are retained.
 

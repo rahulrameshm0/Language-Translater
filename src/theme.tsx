@@ -24,26 +24,26 @@ const light = {
   overlay: "rgba(10,22,40,0.55)",
   navBg: "#14213D",
   navSelected: "#2A3C60",
-  navActive: "#BCEFD8",
+  navActive: "#58A6FF",
   navMuted: "#B8C5DF",
 };
 const dark = {
-  bg: "#090F20",
-  surface: "#15213A",
-  secondary: "#1D2D48",
-  ink: "#F1F5FF",
-  muted: "#A6B6D0",
-  line: "#2A3D5B",
-  accent: "#A2B8FF",
-  accentText: "#0B2349",
-  tint: "#20385D",
+  bg: "#1C1C1E",
+  surface: "#2C2C30",
+  secondary: "#242427",
+  ink: "#F6F6F8",
+  muted: "#A9A9B0",
+  line: "#414146",
+  accent: "#58A6FF",
+  accentText: "#0A1C34",
+  tint: "#243954",
   teal: "#7DE3CD",
   tealTint: "#143D3C",
   error: "#FFADB8",
   overlay: "rgba(0,0,0,0.7)",
-  navBg: "#1A2947",
-  navSelected: "#304770",
-  navActive: "#BCEFD8",
+  navBg: "#1C1C1E",
+  navSelected: "#273C57",
+  navActive: "#58A6FF",
   navMuted: "#B8C5DF",
 };
 export type Colors = typeof light;
@@ -56,7 +56,7 @@ const ThemeContext = createContext({
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const system = useColorScheme();
   const changed = useRef(false);
-  const [preference, setState] = useState<ThemePreference>("system");
+  const [preference, setState] = useState<ThemePreference>("dark");
   useEffect(() => {
     void SecureStore.getItemAsync("vaylo.theme")
       .then((value) => {
