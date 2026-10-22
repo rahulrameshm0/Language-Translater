@@ -52,10 +52,14 @@ export function useMediaInput(report: (message: string) => void) {
     if (timer.current) clearTimeout(timer.current);
     if (active.current) {
       active.current = false;
-      void recorder
-        .stop()
-        .then(() => remove(recorder.uri ?? undefined))
-        .catch(() => {});
+      try {
+        void recorder
+          .stop()
+          .then(() => remove(recorder.uri ?? undefined))
+          .catch(() => {});
+      } catch {
+        /* Native hook may already have released the recorder during unmount. */
+      }
     }
     remove(current.current?.uri);
     current.current = null;

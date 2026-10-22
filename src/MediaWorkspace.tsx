@@ -82,7 +82,9 @@ export function MediaWorkspace({ media, kind, source, locked, onEdit }: Props) {
     );
   }
   const start = () => {
-    player.pause();
+    try {
+      player.pause();
+    } catch {}
     onEdit();
     void media.start();
   };

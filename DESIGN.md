@@ -8,3 +8,6 @@ Learning uses owned PostgreSQL flashcards, a 5/10/20 daily goal, reveal/check/re
 
 ## 1.6 assistant and conversational speaking
 Keep the charcoal #1C1C1E canvas, graphite #2C2C30 surfaces, muted #A9A9B0 copy and blue #58A6FF controls. Outfit carries titles and readable message text. Topic selection uses category chips and a two-column grid. Conversations use left AI / right learner bubbles; feedback is attached below the learner transcript, with replay above it. Five bottom tabs include Assistant. Use actual saved conversations and audio, no decorative waveforms, fake scores, paid topic locks or fabricated levels.
+
+### 1.6.2 speaking refinement
+Conversation runs full screen: centered topic/back header, actual reply-progress strip, graphite left AI/right learner bubbles with compact playback, attached olive-tinted feedback, and a fixed blue mic pill beside a yellow reply-editor shortcut. Keep native safe areas and a keyboard-avoiding review drawer. Do not fabricate avatar identity, audio waveforms/durations or feedback praise.

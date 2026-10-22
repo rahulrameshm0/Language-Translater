@@ -146,3 +146,11 @@ Deploy the updated `translate` function including `assistant.ts`. All AI/transcr
 ### Speaking language and playback (1.6.1)
 
 Speaking uses one Conversation language for your recording, AI reply and feedback. It defaults to the current source language (normally English). Choose English to practice English with English replies; choose another language to practice that language. Existing saved conversations retain their original language. New conversation applies your current selection. AI/read-aloud playback uses a slower speech rate of 0.8; exact speed depends on the installed voice. Actual recorded-reply replay retains your original recording speed.
+
+### Speaking stability and reference layout (1.6.2)
+
+Speaking now opens a full-screen conversation with a centered topic, real reply progress, left/right graphite bubbles, inline playback, expandable feedback and a fixed microphone/review dock. Network/audio notices appear inside this screen. Failed sends keep the review editor and draft visible.
+
+Playback uses rate 0.95 and ranks installed enhanced/neural voices above default or novelty voices. This improves the installed voice choice, but cannot provide human-recorded or premium cloud speech on devices without a suitable voice. No paid service was added.
+
+Removed an unguarded audio-player pause during unmount (the Expo hook already releases it), guarded released-recorder cleanup and player pause calls. These address identified crash paths; the reported device crash has not been reproduced with a device log. Acceptance: record/stop/confirm 15 turns; replay and pause multiple recordings; return to topics; background/foreground during recording and speech; deny microphone permission; disable networking and confirm the draft remains.

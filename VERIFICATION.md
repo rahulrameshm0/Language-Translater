@@ -1,4 +1,13 @@
-# LingoBridge 1.6.1 verification
+# LingoBridge 1.6.2 verification
+
+Version 1.6.2 / build 10 guards audio lifecycle cleanup, selects more natural installed voices, restores speech rate to 0.95 and adds the reference-inspired full-screen speaking layout.
+
+- TypeScript and 42 automated tests pass, including installed-voice ranking. Android/iOS exports pass.
+- Audio-player hook source confirms automatic release on unmount; the extra unguarded cleanup pause was removed. Recorder cleanup now handles synchronous released-object errors as well as promise rejection.
+- Actual components were visually checked in an isolated phone-width harness with synthetic chat data. Reply review, feedback, follow-up and microphone dock render correctly. Harness fixtures are excluded from the repository and native APK.
+- No physical-device crash log or native reproduction was available. Crash resolution, actual microphone playback and perceived voice naturalness require phone acceptance testing; browser TTS output failed in the harness.
+
+## Previous 1.6.1 verification
 
 Speaking now uses one selected conversation language for recording transcription, AI replies and feedback. AI/read-aloud speech rate is 0.8; recorded-reply replay is unchanged. TypeScript and Android/iOS Hermes exports pass. Existing 1.6 authentication, provider and database tests are unchanged. Physical-device speech speed and output still need acceptance testing.
 

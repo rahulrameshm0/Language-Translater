@@ -3,18 +3,18 @@
     "name": "LingoBridge",
     "slug": "three-words-translator",
     "scheme": "threewords",
-    "version": "1.6.1",
+    "version": "1.6.2",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.threewords.translator",
-      "buildNumber": "9"
+      "buildNumber": "10"
     },
     "android": {
       "package": "com.threewords.translator",
       "icon": "./assets/lingobridge-icon.png",
-      "versionCode": 9,
+      "versionCode": 10,
       "softwareKeyboardLayoutMode": "resize"
     },
     "plugins": [

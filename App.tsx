@@ -309,7 +309,7 @@ function Application() {
       }
       setSpeaking(true);
       Speech.speak(a.result, {
-        rate: 0.8,
+        rate: 0.95,
         language: languages[a.target].locale,
         voice: matching.identifier,
         onDone: () => setSpeaking(false),
