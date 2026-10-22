@@ -1,4 +1,8 @@
-# LingoBridge 1.6 verification
+# LingoBridge 1.6.1 verification
+
+Speaking now uses one selected conversation language for recording transcription, AI replies and feedback. AI/read-aloud speech rate is 0.8; recorded-reply replay is unchanged. TypeScript and Android/iOS Hermes exports pass. Existing 1.6 authentication, provider and database tests are unchanged. Physical-device speech speed and output still need acceptance testing.
+
+## Previous 1.6 verification
 
 Version 1.6.0 / build 8 adds a real AI language Assistant and conversational speaking with recorded replies, attached feedback and follow-up questions.
 

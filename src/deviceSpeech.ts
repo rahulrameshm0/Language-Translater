@@ -31,6 +31,7 @@ export async function playSpeech(
   if (AppState.currentState !== "active")
     throw new Error("Return to the app and tap Play again.");
   Speech.speak(text, {
+    rate: 0.8,
     language: languages[language].locale,
     voice:
       voices.find((item) => item.identifier === voice)?.identifier ??

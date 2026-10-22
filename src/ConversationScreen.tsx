@@ -107,7 +107,7 @@ export function ConversationScreen(p: Props) {
     [voiceId, setVoiceId] = useState<string>(),
     [voices, setVoices] = useState<{ identifier: string; name: string }[]>([]);
   const [chatSource, setChatSource] = useState(p.source),
-    [chatTarget, setChatTarget] = useState(p.target);
+    [chatTarget, setChatTarget] = useState(speaking ? p.source : p.target);
   const media = useMediaInput(p.report),
     alive = useRef(true),
     pending = useRef(false),
@@ -143,7 +143,7 @@ export function ConversationScreen(p: Props) {
   useEffect(() => {
     if (!messages.length) {
       setChatSource(p.source);
-      setChatTarget(p.target);
+      setChatTarget(speaking ? p.source : p.target);
     }
   }, [p.source, p.target]);
   useEffect(() => {
@@ -306,7 +306,7 @@ export function ConversationScreen(p: Props) {
     setSaveFailed(false);
     setShowHistory(false);
     setChatSource(p.source);
-    setChatTarget(p.target);
+    setChatTarget(speaking ? p.source : p.target);
   }
   const assistantGreeting: ChatMessage = {
     role: "model",
@@ -416,24 +416,16 @@ export function ConversationScreen(p: Props) {
               Listen, reply in your own words, then get feedback and a follow-up
               question. All topics are available.
             </StudioText>
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <View style={{ flex: 1 }}>
-                <StudioButton
-                  secondary
-                  title={languages[p.source].name}
-                  onPress={() => p.onPick("source")}
-                  disabled={locked}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <StudioButton
-                  secondary
-                  title={languages[p.target].name}
-                  onPress={() => p.onPick("target")}
-                  disabled={locked}
-                />
-              </View>
-            </View>
+            <StudioText muted>Conversation language</StudioText>
+            <StudioButton
+              secondary
+              title={languages[p.source].name}
+              onPress={() => p.onPick("source")}
+              disabled={locked}
+            />
+            <StudioText muted>
+              You and the AI speak this language. Feedback helps you improve it.
+            </StudioText>
           </StudioCard>
           <StudioText muted>Your speaking level</StudioText>
           <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
@@ -502,8 +494,8 @@ export function ConversationScreen(p: Props) {
             ))}
           </View>
           <StudioText muted>
-            Reply in {languages[p.target].name}. Feedback is explained in{" "}
-            {languages[p.source].name}. Voice availability depends on your
+            Speak in {languages[p.source].name}; the AI replies and explains
+            feedback in the same language. Voice availability depends on your
             phone.
           </StudioText>
           {!!voices.length && (
