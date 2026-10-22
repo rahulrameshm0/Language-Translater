@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { validate } from "./validation.ts";
+import { validateMedia, extractMedia, MediaInput } from "./media.ts";
 const headers = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
@@ -12,9 +13,9 @@ export async function handler(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") return new Response(null, { headers });
   if (req.method !== "POST") return reply(405, { error: "Use POST." });
   const contentLength = Number(req.headers.get("Content-Length") ?? 0);
-  if (contentLength > 2900000)
+  if (contentLength > 12000000)
     return reply(413, {
-      error: "Recording is too large. Record up to 30 seconds.",
+      error: "File is too large. Choose a file smaller than 8 MB.",
     });
   try {
     const url = Deno.env.get("SUPABASE_URL")!;
@@ -28,13 +29,16 @@ export async function handler(req: Request): Promise<Response> {
     if (authError || !user)
       return reply(401, { error: "Your session expired. Sign in again." });
     let input;
+    let media: MediaInput | null = null;
     try {
       const raw = await req.text();
-      if (raw.length > 2900000)
+      if (raw.length > 12000000)
         return reply(413, {
-          error: "Recording is too large. Record up to 30 seconds.",
+          error: "File is too large. Choose a file smaller than 8 MB.",
         });
-      input = validate(JSON.parse(raw));
+      const body = JSON.parse(raw);
+      if (body?.action === "extract") media = validateMedia(body);
+      else input = validate(body);
     } catch (e) {
       return reply(400, { error: (e as Error).message });
     }
@@ -57,6 +61,11 @@ export async function handler(req: Request): Promise<Response> {
         error:
           "Translation service is not configured. Contact the app administrator.",
       });
+    if (media) {
+      const result = await extractMedia(media, apiKey);
+      return reply(result.status, result.body);
+    }
+    if (!input) return reply(400, { error: "Invalid translation request." });
     let response: Response;
     try {
       response = await fetch(
@@ -174,6 +183,8 @@ export async function handler(req: Request): Promise<Response> {
         target_language: input.targetLanguage,
         original_text: originalText,
         translated_text: translatedText,
+        input_kind: input.inputKind,
+        source_name: input.sourceName,
       })
       .select("id")
       .single();

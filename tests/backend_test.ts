@@ -16,6 +16,7 @@ type Scenario = {
   blocked?: boolean;
   missingKey?: boolean;
   transcript?: string;
+  tooLong?: boolean;
 };
 async function run(
   scenario: Scenario,
@@ -50,7 +51,12 @@ async function run(
         new Headers(init?.headers).get("X-goog-api-key") === "test-gemini-key",
       );
       const request = JSON.parse(String(init?.body));
-      if ((body as { audioBase64?: string }).audioBase64) {
+      if ((body as { action?: string }).action === "extract") {
+        assert(
+          request.contents[0].parts[0].inlineData.data ===
+            (body as { fileBase64: string }).fileBase64,
+        );
+      } else if ((body as { audioBase64?: string }).audioBase64) {
         assert(
           request.contents[0].parts[0].inlineData.data ===
             (body as { audioBase64: string }).audioBase64,
@@ -83,6 +89,7 @@ async function run(
                     : JSON.stringify({
                         originalText: scenario.transcript ?? "Hello",
                         translatedText: "Բարև",
+                        tooLong: scenario.tooLong ?? false,
                       }),
                 },
               ],
@@ -93,6 +100,12 @@ async function run(
     }
     if (url.includes("/rest/v1/translations")) {
       const record = JSON.parse(String(init?.body));
+      if ((body as { inputKind?: string }).inputKind) {
+        assert(record.input_kind === (body as { inputKind: string }).inputKind);
+        assert(
+          record.source_name === (body as { sourceName: string }).sourceName,
+        );
+      }
       assert(
         record.user_id === user,
         "History owner must come from verified user",
@@ -238,3 +251,84 @@ Deno.test("silent or overlong transcripts do not enter history", async () => {
     assert(!result.calls.some((url) => url.includes("/rest/v1/translations")));
   }
 });
+
+const pdfInput = {
+  action: "extract",
+  kind: "document",
+  sourceLanguage: "en",
+  mimeType: "application/pdf",
+  fileBase64: btoa("%PDF-1.7\nSample"),
+};
+Deno.test(
+  "PDF extraction returns review text without saving history",
+  async () => {
+    const result = await run({}, pdfInput);
+    assert(result.status === 200);
+    assert(result.body.originalText === "Hello");
+    assert(!result.calls.some((url) => url.includes("/rest/v1/translations")));
+  },
+);
+Deno.test(
+  "media requires authentication and shares the server request limit",
+  async () => {
+    assert((await run({}, pdfInput, false)).status === 401);
+    const limited = await run({ allowed: false }, pdfInput);
+    assert(limited.status === 429);
+    assert(!limited.calls.some((url) => url.includes("generativelanguage")));
+  },
+);
+Deno.test(
+  "media rejects empty, incomplete, overlong and failed extraction",
+  async () => {
+    for (const scenario of [
+      { transcript: "" },
+      { tooLong: true },
+      { transcript: "a".repeat(5001) },
+    ])
+      assert((await run(scenario, pdfInput)).status === 422);
+    for (const scenario of [
+      { malformed: true },
+      { finishReason: "MAX_TOKENS" },
+      { providerFailure: true },
+      { timeout: true },
+    ])
+      assert((await run(scenario, pdfInput)).status === 502);
+    assert((await run({ providerStatus: 429 }, pdfInput)).status === 429);
+  },
+);
+Deno.test(
+  "call audio is transcribed for review and never saved before confirmation",
+  async () => {
+    const result = await run(
+      { transcript: "Hello, this is a call." },
+      {
+        ...pdfInput,
+        kind: "call",
+        mimeType: "audio/mpeg",
+        fileBase64: btoa("ID3 sample audio"),
+      },
+    );
+    assert(result.status === 200);
+    assert(result.body.originalText.includes("call"));
+    assert(!result.calls.some((url) => url.includes("/rest/v1/translations")));
+  },
+);
+
+Deno.test(
+  "confirmed file translation saves kind and filename under verified ownership",
+  async () => {
+    const result = await run(
+      {},
+      {
+        text: "Hello",
+        sourceLanguage: "en",
+        targetLanguage: "es",
+        inputKind: "document",
+        sourceName: "Example.pdf",
+        user_id: "attacker",
+      },
+    );
+    assert(result.status === 200);
+    assert(result.body.historyRecordId === "saved-id");
+  },
+);

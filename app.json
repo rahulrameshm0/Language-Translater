@@ -1,20 +1,20 @@
 {
   "expo": {
-    "name": "Vaylo",
+    "name": "LingoBridge",
     "slug": "three-words-translator",
     "scheme": "threewords",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.threewords.translator",
-      "buildNumber": "5"
+      "buildNumber": "6"
     },
     "android": {
       "package": "com.threewords.translator",
-      "icon": "./assets/icon.png",
-      "versionCode": 5,
+      "icon": "./assets/lingobridge-icon.png",
+      "versionCode": 6,
       "softwareKeyboardLayoutMode": "resize"
     },
     "plugins": [
@@ -24,12 +24,21 @@
       [
         "expo-speech-recognition",
         {
-          "microphonePermission": "Allow Vaylo to hear your words for live transcription.",
-          "speechRecognitionPermission": "Allow Vaylo to turn speech into text that you can review before translation.",
+          "microphonePermission": "Allow LingoBridge to hear your words for live transcription.",
+          "speechRecognitionPermission": "Allow LingoBridge to turn speech into text that you can review before translation.",
           "androidSpeechServicePackages": [
             "com.google.android.googlequicksearchbox",
             "com.google.android.tts"
           ]
+        }
+      ],
+      "expo-sharing",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow LingoBridge to record voice clips for translation.",
+          "enableBackgroundRecording": false,
+          "enableBackgroundPlayback": false
         }
       ]
     ],
@@ -39,6 +48,6 @@
         "projectId": "e77aa483-7ec9-46b6-a208-3fa02ab82b7d"
       }
     },
-    "icon": "./assets/icon.png"
+    "icon": "./assets/lingobridge-icon.png"
   }
 }

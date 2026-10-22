@@ -1,9 +1,9 @@
-# Vaylo 1.3 verification
+# LingoBridge 1.4 verification
 
-Current work adds a redesigned React Native workspace and live speech recognition with editable transcript review and explicit Confirm & translate. Android build 5, version 1.3.0. This requires a new native install; the previous APK cannot gain the speech-recognition module through a JavaScript refresh.
+Version 1.4.0 / native build 6 adds document/audio/call-recording import, voice clip recording, reviewed extraction, TXT export and new translation-related branding. Old package identifiers and signing key are retained.
 
 - TypeScript, Edge Function checks, formatting, and PostgreSQL migration/RLS tests pass.
-- Twenty-three automated tests cover backend validation/auth/rate limits/provider handling and transcript interim replacement, continuous segments, empty finals, stop preservation, repeated phrases, Unicode and review edits. Native speech events are not exercised by these pure tests.
+- Thirty-three automated tests cover backend validation/auth/rate limits/provider handling and transcript interim replacement, continuous segments, empty finals, stop preservation, repeated phrases, Unicode and review edits. Native speech events are not exercised by these pure tests.
 - No paid API or billing plan was added. Recognition uses the device speech service; only confirmed text goes to the existing Gemini translation endpoint.
 - The live backend allowlist and hosted database constraints support 30 languages (870 pairs). Legacy Malayalam history remains intact.
 - Automated tests check catalog consistency, search, RTL detection and all 870 HTTP pairs using mocked provider output. Translation quality for every live pair is not verified.
@@ -14,3 +14,9 @@ Current work adds a redesigned React Native workspace and live speech recognitio
 - npm reports 26 dependency advisories (21 high, 5 moderate). No incompatible forced framework changes were applied. Review supported upstream updates before production release.
 
 See README.md for the device acceptance checklist and DESIGN.md for the visual design.
+
+New tests cover PDF/audio extraction without history writes, invalid authentication, shared rate limits, provider failures, oversized/empty/truncated results, file signatures and sizes, DOCX XML/entity extraction and decompression bounds, unsupported formats and source metadata validation. External provider responses are mocked. Native microphone, picker, playback and sharing need device acceptance tests. PDF/audio provider quality and full authenticated file upload still need live acceptance testing.
+
+All 33 tests passed after adding source metadata. Expo Doctor passed 20/20 and Android/iOS Hermes bundle exports passed. The hosted source-history migration completed successfully.
+
+The media-capable translate function has been deployed on hosted Supabase. Visual review covered Docs, Audio and Calls at phone size using an isolated component harness. The harness is not shipped in the native app.

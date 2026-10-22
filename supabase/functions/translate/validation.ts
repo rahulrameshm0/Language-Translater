@@ -31,6 +31,8 @@ export const supportedLanguages = [
   "vi",
 ] as const;
 export type TranslationInput = {
+  inputKind: "text" | "voice" | "document" | "recording" | "call";
+  sourceName: string | null;
   sourceLanguage: string;
   targetLanguage: string;
 } & (
@@ -52,7 +54,25 @@ export function validate(body: unknown): TranslationInput {
     sourceLanguage === targetLanguage
   )
     throw new Error("Choose two different supported languages.");
+  const raw = body as Record<string, unknown>;
+  const inputKind = raw.inputKind ?? (audioBase64 ? "recording" : "text");
+  if (
+    !["text", "voice", "document", "recording", "call"].includes(
+      String(inputKind),
+    )
+  )
+    throw new Error("Invalid input type.");
+  if (
+    raw.sourceName !== undefined &&
+    raw.sourceName !== null &&
+    (typeof raw.sourceName !== "string" ||
+      raw.sourceName.length > 180 ||
+      /[\x00-\x1f]/.test(raw.sourceName))
+  )
+    throw new Error("Invalid source name.");
   const pair = {
+    inputKind: inputKind as TranslationInput["inputKind"],
+    sourceName: typeof raw.sourceName === "string" ? raw.sourceName : null,
     sourceLanguage: String(sourceLanguage),
     targetLanguage: String(targetLanguage),
   };

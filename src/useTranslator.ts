@@ -151,7 +151,10 @@ export function useTranslator() {
       setBusy(false);
     }
   }
-  async function translate(confirmedText?: string) {
+  async function translate(
+    confirmedText?: string,
+    metadata?: { inputKind: string; sourceName?: string },
+  ) {
     const current = generation.current;
     setBusy(true);
     setMessage("");
@@ -160,6 +163,7 @@ export function useTranslator() {
       const { data, error } = await supabase.functions.invoke("translate", {
         body: {
           text: confirmedText ?? text,
+          ...metadata,
           sourceLanguage: source,
           targetLanguage: target,
         },
@@ -199,7 +203,7 @@ export function useTranslator() {
       let query = supabase
         .from("translations")
         .select(
-          "id,source_language,target_language,original_text,translated_text,created_at",
+          "id,source_language,target_language,original_text,translated_text,created_at,input_kind,source_name",
         )
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })

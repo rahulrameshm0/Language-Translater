@@ -1,6 +1,6 @@
-# Vaylo
+# LingoBridge
 
-![Vaylo icon](assets/icon.png)
+![LingoBridge icon](assets/lingobridge-icon.png)
 
 [Download the latest Android APK](https://github.com/rahulrameshm0/vaylo-downloads/releases/latest)
 
@@ -104,3 +104,19 @@ Thirty languages: English, Spanish, Armenian, German, French, Italian, Portugues
 The searchable picker matches English/native names and codes, with accent-insensitive Latin search. Arabic, Hebrew and Persian text aligns right. Device speech/read-aloud availability varies by language and phone; typing remains available for all 30. The refreshed UI bundles Outfit fonts and introduces a cobalt language cover, native-script tiles, integrated controls and a contrasting floating navigation bar.
 
 Migration `202610220001` expands history constraints and retains old Malayalam records. It was applied through the dashboard; include it when repairing migration history before a future CLI push. Web rendering dependencies are development tools for isolated visual checks, not simulated services in the native app.
+
+## LingoBridge 1.4 translation studio
+
+The app is now LingoBridge with a translation-card launcher icon, new heading and five tools. All 30 languages, authentication, private PostgreSQL history, light/dark appearance and manual APK updates remain. Native identifiers and signing key are retained.
+
+- Text and Live: type or see speech appear live, review and confirm.
+- Docs: import PDF, DOCX or UTF-8 TXT. DOCX/TXT text is extracted locally. PDF extraction uses the authenticated backend and Gemini. The translated output is plain text; layout, images and document formatting are not reproduced.
+- Audio: record a voice clip up to 60 seconds or import M4A/MP3/WAV/AAC/OGG/FLAC. Preview audio, transcribe, edit and confirm.
+- Calls: import an existing call recording in those formats. The app does not capture calls or access the phone call stream. AMR needs conversion to a supported format before import.
+- Completed results offer Copy, Listen and Export TXT via the native share sheet.
+
+Files are limited to 8 MB, and extracted/confirmed text to 5,000 Unicode characters per item. Longer items are rejected with split/trim guidance rather than shortened. PDF/audio bytes are sent to Gemini only after Extract/Transcribe; they are never stored in Supabase. Only reviewed text, translated text, input kind and source filename enter history after confirmation. Local imported/recorded cache files are removed on discard, source/tool reset or sign-out. Exported TXT copies remain in app cache until OS cleanup. Keep files you need in the phone's Files app.
+
+Deploy migration 202610220002 before updating the translate function. It adds input_kind and source_name while retaining RLS. The same function accepts action=extract with kind, sourceLanguage, mimeType and fileBase64, verifies the user and consumes the shared 30-request/minute limit. It validates decoded size and file headers, rejects blocked/incomplete/empty/overlong extraction, and never inserts history at the extraction step. It uses the existing free-tier Gemini key with no paid fallback. DOCX decompression is restricted to word/document.xml with expansion bounds.
+
+Acceptance testing: native file picker, audio permissions/recording, playback, PDF scans, DOCX tables/paragraphs, TXT encoding, import call recording, interrupted uploads, editing/retry, source labels in history, account isolation and native TXT sharing. Service quotas and device speech availability still apply.

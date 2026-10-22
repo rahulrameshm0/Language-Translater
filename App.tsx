@@ -44,6 +44,11 @@ import {
 import { Colors, ThemePreference, ThemeProvider, useTheme } from "./src/theme";
 import { useTranslator } from "./src/useTranslator";
 import { useVoice } from "./src/useVoice";
+import { useMediaInput } from "./src/useMediaInput";
+import { MediaWorkspace } from "./src/MediaWorkspace";
+import { InputKind } from "./src/mediaFiles";
+import { File, Paths } from "expo-file-system";
+import * as Sharing from "expo-sharing";
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
 function Icon({
   name,
@@ -149,11 +154,13 @@ function LanguageCover({ compact = false }: { compact?: boolean }) {
         <Text
           style={[s.coverTitle, compact && { fontSize: 29, lineHeight: 33 }]}
         >
-          Hello,{"\n"}world.
+          Translation{"\n"}studio.
         </Text>
         <View style={s.coverTag}>
           <Icon name="globe-outline" size={14} color="#FFFFFF" />
-          <Text style={s.coverTagText}>30 languages, one connection</Text>
+          <Text style={s.coverTagText}>
+            Text, files & audio in 30 languages
+          </Text>
         </View>
       </View>
       <View
@@ -209,13 +216,25 @@ function Application() {
   const { colors: c, dark, preference, setPreference } = useTheme();
   const s = useMemo(() => styles(c), [c]);
   const voice = useVoice(a.setMessage);
-  const [inputMode, setInputMode] = useState<"text" | "voice">("text");
+  const media = useMediaInput(a.setMessage);
+  const [inputMode, setInputMode] = useState<InputKind>("text");
   const [picker, setPicker] = useState<"source" | "target" | null>(null);
   const [keyboard, setKeyboard] = useState(false);
   const [languageQuery, setLanguageQuery] = useState("");
   const visibleLanguages = filterLanguages(languageQuery);
   const [speaking, setSpeaking] = useState(false);
-  const locked = a.busy || voice.recording || voice.working;
+  const locked =
+    a.busy ||
+    voice.recording ||
+    voice.working ||
+    media.working ||
+    media.recording;
+  const mediaMode =
+    inputMode === "document" ||
+    inputMode === "recording" ||
+    inputMode === "call";
+  const sourceDraft =
+    inputMode === "voice" ? voice.transcript : mediaMode ? media.draft : a.text;
   useEffect(() => {
     const shown = Keyboard.addListener("keyboardDidShow", () =>
       setKeyboard(true),
@@ -234,6 +253,7 @@ function Application() {
   }, [a.result, a.target]);
   useEffect(() => {
     voice.discard();
+    media.clear();
     void Speech.stop();
     setSpeaking(false);
   }, [a.session?.user.id]);
@@ -288,7 +308,7 @@ function Application() {
     if (a.busy || voice.recording || voice.working || !voice.transcript.trim())
       return;
     Keyboard.dismiss();
-    await a.translate(voice.transcript);
+    await a.translate(voice.transcript, { inputKind: "voice" });
   }
   function openHistory(item: Translation) {
     if (
@@ -302,6 +322,7 @@ function Application() {
       return;
     }
     voice.discard();
+    media.clear();
     a.setSource(item.source_language);
     a.setTarget(item.target_language);
     a.setText(item.original_text);
@@ -310,16 +331,63 @@ function Application() {
     setInputMode("text");
     a.setMessage("");
   }
-  const version = Constants.expoConfig?.version ?? "1.3.0";
+  async function exportTranslation() {
+    try {
+      if (!(await Sharing.isAvailableAsync()))
+        throw new Error("Sharing is unavailable on this device.");
+      const output = new File(
+        Paths.cache,
+        `lingobridge-translation-${Date.now()}.txt`,
+      );
+      output.write(
+        `${languages[a.source].name} → ${languages[a.target].name}\n\n${a.text}\n\nTranslation\n${a.result}`,
+      );
+      await Sharing.shareAsync(output.uri, {
+        mimeType: "text/plain",
+        dialogTitle: "Export translation",
+        UTI: "public.plain-text",
+      });
+    } catch (error) {
+      a.setMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not export the translation. You can still copy it.",
+      );
+    }
+  }
+  function changeTool(next: InputKind) {
+    if (next === inputMode) return;
+    const change = () => {
+      media.clear();
+      a.setResult("");
+      a.setMessage("");
+      setInputMode(next);
+      Keyboard.dismiss();
+    };
+    if (media.file || media.draft)
+      Alert.alert(
+        "Switch translation tool?",
+        "The selected file and its unsubmitted text will be cleared.",
+        [
+          { text: "Keep working", style: "cancel" },
+          { text: "Switch tool", onPress: change },
+        ],
+      );
+    else change();
+  }
+  const version = Constants.expoConfig?.version ?? "1.4.0";
   return (
     <SafeAreaView style={s.safe} edges={["top", "left", "right", "bottom"]}>
       <StatusBar style={dark ? "light" : "dark"} />
       <View style={s.header}>
         <View style={s.brandRow}>
-          <Image source={require("./assets/icon.png")} style={s.logo} />
+          <Image
+            source={require("./assets/lingobridge-icon.png")}
+            style={s.logo}
+          />
           <View>
-            <Text style={s.brand}>Vaylo</Text>
-            <Text style={s.brandCaption}>Words without limits.</Text>
+            <Text style={s.brand}>LingoBridge</Text>
+            <Text style={s.brandCaption}>Translate your world.</Text>
           </View>
         </View>
         <IconButton
@@ -482,39 +550,50 @@ function Application() {
               <>
                 {!keyboard && <LanguageCover compact={inputMode === "voice"} />}
                 <View style={s.segment}>
-                  {(["text", "voice"] as const).map((mode) => (
+                  {(
+                    [
+                      { mode: "text", label: "Text", icon: "text-outline" },
+                      { mode: "voice", label: "Live", icon: "mic-outline" },
+                      {
+                        mode: "document",
+                        label: "Docs",
+                        icon: "document-text-outline",
+                      },
+                      {
+                        mode: "recording",
+                        label: "Audio",
+                        icon: "musical-notes-outline",
+                      },
+                      { mode: "call", label: "Calls", icon: "call-outline" },
+                    ] as const
+                  ).map((tool) => (
                     <Pressable
-                      key={mode}
+                      key={tool.mode}
                       accessibilityRole="tab"
-                      accessibilityState={{ selected: inputMode === mode }}
+                      accessibilityLabel={`${tool.label} translation`}
+                      accessibilityState={{ selected: inputMode === tool.mode }}
                       disabled={locked}
-                      onPress={() => {
-                        setInputMode(mode);
-
-                        a.setMessage("");
-                        Keyboard.dismiss();
-                      }}
+                      onPress={() => changeTool(tool.mode)}
                       style={[
                         s.segmentItem,
-                        inputMode === mode && s.segmentSelected,
+                        inputMode === tool.mode && s.segmentSelected,
                       ]}
                     >
                       <Icon
-                        name={
-                          mode === "text" ? "create-outline" : "mic-outline"
-                        }
-                        size={19}
-                        color={inputMode === mode ? c.accentText : c.muted}
+                        name={tool.icon}
+                        size={21}
+                        color={inputMode === tool.mode ? c.accentText : c.muted}
                       />
                       <Text
                         style={[
                           s.segmentLabel,
                           {
-                            color: inputMode === mode ? c.accentText : c.muted,
+                            color:
+                              inputMode === tool.mode ? c.accentText : c.muted,
                           },
                         ]}
                       >
-                        {mode === "text" ? "Type a message" : "Speak live"}
+                        {tool.label}
                       </Text>
                     </Pressable>
                   ))}
@@ -531,7 +610,9 @@ function Application() {
                       setPicker("source");
                     }}
                   >
-                    <Text style={s.smallLabel}>I’m speaking</Text>
+                    <Text style={s.smallLabel}>
+                      {inputMode === "voice" ? "I’m speaking" : "From"}
+                    </Text>
                     <View style={s.inline}>
                       <Text style={s.languageText}>
                         {languages[a.source].name}
@@ -549,6 +630,7 @@ function Application() {
                       if (a.result) a.setText(a.result);
                       a.setResult("");
                       voice.discard();
+                      media.clear();
                       a.setMessage("");
                     }}
                   />
@@ -572,7 +654,18 @@ function Application() {
                     </View>
                   </Pressable>
                 </View>
-                {inputMode === "text" ? (
+                {mediaMode ? (
+                  <MediaWorkspace
+                    media={media}
+                    kind={inputMode as "document" | "recording" | "call"}
+                    source={a.source}
+                    locked={locked}
+                    onEdit={() => {
+                      a.setResult("");
+                      a.setMessage("");
+                    }}
+                  />
+                ) : inputMode === "text" ? (
                   <View style={s.composer}>
                     <View style={s.spaceBetween}>
                       <Text style={s.label}>{languages[a.source].name}</Text>
@@ -788,21 +881,24 @@ function Application() {
                   label={
                     a.busy
                       ? "Translating…"
-                      : inputMode === "voice"
+                      : inputMode !== "text"
                         ? "Confirm & translate"
                         : "Translate text"
                   }
                   icon={a.busy ? "hourglass-outline" : "arrow-forward"}
                   disabled={
                     locked ||
-                    (inputMode === "text"
-                      ? !a.text.trim() || Array.from(a.text).length > 5000
-                      : !voice.transcript.trim() ||
-                        Array.from(voice.transcript).length > 5000)
+                    !sourceDraft.trim() ||
+                    Array.from(sourceDraft).length > 5000
                   }
                   onPress={() => {
                     Keyboard.dismiss();
                     if (inputMode === "voice") void submitTranscript();
+                    else if (mediaMode)
+                      void a.translate(media.draft, {
+                        inputKind: inputMode,
+                        sourceName: media.file?.name,
+                      });
                     else void a.translate();
                   }}
                 />
@@ -828,7 +924,14 @@ function Application() {
                     >
                       {a.result}
                     </Text>
-                    <View style={s.resultActions}>
+                    <View style={[s.resultActions, { flexWrap: "wrap" }]}>
+                      <Action
+                        label="Export TXT"
+                        small
+                        quiet
+                        icon="share-outline"
+                        onPress={() => void exportTranslation()}
+                      />
                       <Action
                         label={speaking ? "Stop reading" : "Listen"}
                         small
@@ -858,10 +961,11 @@ function Application() {
                     </View>
                   </View>
                 )}
-                {inputMode === "voice" && (
+                {inputMode !== "text" && (
                   <Text style={s.reviewNote}>
-                    Nothing is translated until you confirm. Stop listening,
-                    check the words, then tap Confirm & translate.
+                    {mediaMode
+                      ? "Review the extracted text, make any corrections, then tap Confirm & translate."
+                      : "Nothing is translated until you confirm. Stop listening, check the words, then tap Confirm & translate."}
                   </Text>
                 )}
                 <Text style={s.footnote}>
@@ -934,6 +1038,16 @@ function Application() {
                     <Text numberOfLines={2} style={s.original}>
                       {item.original_text}
                     </Text>
+                    {item.source_name && (
+                      <Text style={s.caption}>
+                        {item.input_kind === "call"
+                          ? "Call recording"
+                          : item.input_kind === "document"
+                            ? "Document"
+                            : "Audio"}{" "}
+                        · {item.source_name}
+                      </Text>
+                    )}
                     <Text numberOfLines={3} style={s.savedTranslation}>
                       {item.translated_text}
                     </Text>
@@ -1046,7 +1160,7 @@ function Application() {
                   <View style={s.spaceBetween}>
                     <View style={s.inline}>
                       <Icon name="sparkles-outline" color={c.accent} />
-                      <Text style={s.panelTitle}>Vaylo {version}</Text>
+                      <Text style={s.panelTitle}>LingoBridge {version}</Text>
                     </View>
                     <View style={s.versionTag}>
                       <Text
@@ -1259,6 +1373,7 @@ function Application() {
                   style={s.languageOption}
                   onPress={() => {
                     if (picker) {
+                      if (picker === "source") media.clear();
                       a.chooseLanguage(code, picker);
                       voice.discard();
                     }
@@ -1333,7 +1448,7 @@ const styles = (c: Colors) =>
     brandRow: { flexDirection: "row", gap: 11, alignItems: "center" },
     logo: { width: 41, height: 41, borderRadius: 13 },
     brand: {
-      fontSize: 25,
+      fontSize: 22,
       fontFamily: "Outfit_700Bold",
       letterSpacing: -0.8,
       color: c.ink,
@@ -1434,7 +1549,7 @@ const styles = (c: Colors) =>
     },
     segmentItem: {
       flex: 1,
-      flexDirection: "row",
+      flexDirection: "column",
       alignItems: "center",
       justifyContent: "center",
       gap: 8,
@@ -1442,7 +1557,7 @@ const styles = (c: Colors) =>
       borderRadius: 12,
     },
     segmentSelected: { backgroundColor: c.accent },
-    segmentLabel: { fontSize: 14, fontFamily: "Outfit_600SemiBold" },
+    segmentLabel: { fontSize: 11, fontFamily: "Outfit_600SemiBold" },
     languageRow: {
       flexDirection: "row",
       alignItems: "center",
@@ -1659,8 +1774,8 @@ const styles = (c: Colors) =>
     coverCopy: { flex: 1, gap: 17, zIndex: 1 },
     coverTitle: {
       fontFamily: "Outfit_700Bold",
-      fontSize: 38,
-      lineHeight: 40,
+      fontSize: 30,
+      lineHeight: 35,
       letterSpacing: -1.1,
       color: "#FFFFFF",
       maxWidth: "76%",

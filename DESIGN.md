@@ -16,3 +16,7 @@ Layout:
   [floating Translate / History / Account]
 
 Compared with 1.2, the expressive cover, distinctive bundled typography, integrated controls and higher-contrast navigation make a visible structural change. Keep the hero compact enough that the input stays close. During keyboard entry the hero collapses and navigation hides to prioritize the active field. Native scripts are visual identity and real content, not flag icons or decorative stock imagery. Language search and review states take priority over animation.
+
+## LingoBridge 1.4 studio
+
+The translation-card icon and LingoBridge wordmark replace the abstract Vaylo mark. The cover now reads Translation studio. A five-tool icon rail groups Text, Live, Docs, Audio and Calls without crowding a phone screen. Document/audio cards clearly separate Import/Record, Extract/Transcribe for review, and Confirm & translate. The review editor and language pair retain the same hierarchy across tools. History labels imported sources and completed results can export as plain TXT. Cobalt, mint and Outfit remain the visual system.

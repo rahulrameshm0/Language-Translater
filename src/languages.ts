@@ -188,6 +188,8 @@ export const languageName = (code: string) =>
 export const isLanguage = (code: string): code is Language =>
   Object.prototype.hasOwnProperty.call(languages, code);
 export type Translation = {
+  input_kind?: "text" | "voice" | "document" | "recording" | "call";
+  source_name?: string | null;
   id: string;
   source_language: string;
   target_language: string;
